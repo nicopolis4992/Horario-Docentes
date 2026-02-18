@@ -2,12 +2,12 @@ import React, { useState, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import { AppProvider, useAppStore } from './store';
 import { Teacher, Subject, Classroom, SubjectArea, ClassroomType, DayOfWeek, TimeSlot, ScheduleAssignment, CourseGroup } from './types';
-import { 
-  LayoutDashboard, 
-  Users, 
-  BookOpen, 
-  School, 
-  CalendarDays, 
+import {
+  LayoutDashboard,
+  Users,
+  BookOpen,
+  School,
+  CalendarDays,
   Menu,
   X,
   Plus,
@@ -69,7 +69,7 @@ const Modal = ({ isOpen, onClose, title, children, maxWidth = "max-w-xl" }: { is
 const OfferPlannerView = () => {
   const { state, dispatch } = useAppStore();
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
-  
+
   // Generator State
   const [baseClassroomId, setBaseClassroomId] = useState<string>('');
   const [useMaxCapacity, setUseMaxCapacity] = useState(false);
@@ -78,12 +78,12 @@ const OfferPlannerView = () => {
   // Delete Confirmation State
   const [groupToDelete, setGroupToDelete] = useState<string | null>(null);
 
-  const selectedSubject = useMemo(() => 
-    state.subjects.find(s => s.id === selectedSubjectId), 
+  const selectedSubject = useMemo(() =>
+    state.subjects.find(s => s.id === selectedSubjectId),
     [state.subjects, selectedSubjectId]
   );
 
-  const existingGroups = useMemo(() => 
+  const existingGroups = useMemo(() =>
     state.courseGroups.filter(g => g.subjectId === selectedSubjectId),
     [state.courseGroups, selectedSubjectId]
   );
@@ -96,9 +96,9 @@ const OfferPlannerView = () => {
 
     const capacity = useMaxCapacity ? classroom.maxCapacity : classroom.recommendedCapacity;
     const totalStudents = selectedSubject.projectedStudents;
-    
+
     const numberOfGroups = Math.ceil(totalStudents / capacity);
-    
+
     const newGroups: Partial<CourseGroup>[] = [];
     let studentsRemaining = totalStudents;
 
@@ -166,7 +166,7 @@ const OfferPlannerView = () => {
     const groupsLoad = state.courseGroups
       .filter(g => g.teacherId === teacherId && g.id !== excludeGroupId)
       .reduce((acc, g) => acc + g.totalHours, 0);
-      
+
     // 2. Manual Assignments Load: Count assignments that are NOT linked to any course group (ad-hoc)
     // We assume 1 assignment = 1 hour for MVP simplicity
     const manualLoad = state.assignments
@@ -198,11 +198,10 @@ const OfferPlannerView = () => {
                   setSelectedSubjectId(subject.id);
                   setPreviewGroups([]); // Reset preview when changing subject
                 }}
-                className={`w-full text-left p-3 rounded-lg border transition-all ${
-                  selectedSubjectId === subject.id
-                    ? 'bg-blue-50 border-blue-400 shadow-sm ring-1 ring-blue-400'
-                    : 'bg-white border-slate-100 hover:bg-slate-50'
-                }`}
+                className={`w-full text-left p-3 rounded-lg border transition-all ${selectedSubjectId === subject.id
+                  ? 'bg-blue-50 border-blue-400 shadow-sm ring-1 ring-blue-400'
+                  : 'bg-white border-slate-100 hover:bg-slate-50'
+                  }`}
               >
                 <div className="flex justify-between items-start mb-1">
                   <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full ${config.bg} ${config.color}`}>
@@ -227,7 +226,7 @@ const OfferPlannerView = () => {
                 </div>
                 {/* Progress Bar */}
                 <div className="w-full bg-slate-100 h-1 mt-2 rounded-full overflow-hidden">
-                  <div 
+                  <div
                     className={`h-full ${isFullyPlanned ? 'bg-emerald-500' : 'bg-amber-400'}`}
                     style={{ width: `${Math.min(100, (totalPlannedStudents / subject.projectedStudents) * 100)}%` }}
                   ></div>
@@ -253,35 +252,35 @@ const OfferPlannerView = () => {
             {/* Header Subject Info */}
             <div className="p-6 border-b border-slate-100 bg-white">
               <div className="flex justify-between items-start">
-                 <div>
-                    <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                      {selectedSubject.name}
-                      <span className="text-sm font-normal text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
-                        {selectedSubject.projectedStudents} Estudiantes Proyectados
-                      </span>
-                    </h2>
-                    <div className="flex gap-4 mt-2 text-sm text-slate-600">
-                       <span className="flex items-center gap-1"><Clock size={14} /> {selectedSubject.credits} Horas/Semana</span>
-                       <span className="flex items-center gap-1"><GraduationCap size={14} /> {AREA_CONFIG[selectedSubject.area].label}</span>
-                    </div>
-                 </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                    {selectedSubject.name}
+                    <span className="text-sm font-normal text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
+                      {selectedSubject.projectedStudents} Estudiantes Proyectados
+                    </span>
+                  </h2>
+                  <div className="flex gap-4 mt-2 text-sm text-slate-600">
+                    <span className="flex items-center gap-1"><Clock size={14} /> {selectedSubject.credits} Horas/Semana</span>
+                    <span className="flex items-center gap-1"><GraduationCap size={14} /> {AREA_CONFIG[selectedSubject.area].label}</span>
+                  </div>
+                </div>
               </div>
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
-              
+
               {/* --- GENERATOR SECTION (If no groups exist or want to add more) --- */}
               {existingGroups.length === 0 && (
                 <div className="bg-white rounded-xl border border-blue-100 shadow-sm p-6 mb-8 animate-fade-in">
                   <div className="flex items-center gap-2 mb-4 text-blue-800">
-                     <Calculator size={20} />
-                     <h3 className="font-bold">Generador de Paralelos</h3>
+                    <Calculator size={20} />
+                    <h3 className="font-bold">Generador de Paralelos</h3>
                   </div>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end bg-blue-50/50 p-4 rounded-lg border border-blue-100">
                     <div className="flex-1">
                       <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Aula Base (Estrategia)</label>
-                      <select 
+                      <select
                         className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-slate-900 text-sm"
                         value={baseClassroomId}
                         onChange={(e) => {
@@ -297,23 +296,23 @@ const OfferPlannerView = () => {
                         ))}
                       </select>
                     </div>
-                    
+
                     <div className="flex items-center pb-2">
-                       <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
-                          <input 
-                            type="checkbox" 
-                            checked={useMaxCapacity}
-                            onChange={(e) => {
-                              setUseMaxCapacity(e.target.checked);
-                              setPreviewGroups([]); // Reset
-                            }}
-                            className="rounded text-blue-600 focus:ring-blue-500"
-                          />
-                          <span>Usar Capacidad Máxima (Riesgo)</span>
-                       </label>
+                      <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={useMaxCapacity}
+                          onChange={(e) => {
+                            setUseMaxCapacity(e.target.checked);
+                            setPreviewGroups([]); // Reset
+                          }}
+                          className="rounded text-blue-600 focus:ring-blue-500"
+                        />
+                        <span>Usar Capacidad Máxima (Riesgo)</span>
+                      </label>
                     </div>
 
-                    <button 
+                    <button
                       onClick={handleCalculate}
                       disabled={!baseClassroomId}
                       className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white rounded-lg font-bold text-sm transition-colors shadow-sm"
@@ -327,7 +326,7 @@ const OfferPlannerView = () => {
                     <div className="mt-6 border-t border-slate-100 pt-4">
                       <h4 className="font-bold text-slate-700 mb-3 flex items-center justify-between">
                         <span>Vista Previa: {previewGroups.length} Grupos Generados</span>
-                        <button 
+                        <button
                           onClick={handleConfirmGroups}
                           className="text-sm bg-emerald-600 text-white px-4 py-1.5 rounded-lg hover:bg-emerald-700 transition-colors shadow-sm"
                         >
@@ -335,17 +334,17 @@ const OfferPlannerView = () => {
                         </button>
                       </h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                         {previewGroups.map((group, idx) => (
-                           <div key={idx} className="bg-white border-2 border-dashed border-blue-200 p-3 rounded-lg opacity-75 hover:opacity-100 transition-opacity">
-                              <div className="flex justify-between font-bold text-slate-700 mb-2">
-                                <span>{group.name}</span>
-                                <span className="bg-blue-100 text-blue-700 px-2 rounded text-xs flex items-center">{group.studentCount} est.</span>
-                              </div>
-                              <div className="text-xs text-slate-500">
-                                Aula sugerida: {state.classrooms.find(c => c.id === group.plannedClassroomId)?.name}
-                              </div>
-                           </div>
-                         ))}
+                        {previewGroups.map((group, idx) => (
+                          <div key={idx} className="bg-white border-2 border-dashed border-blue-200 p-3 rounded-lg opacity-75 hover:opacity-100 transition-opacity">
+                            <div className="flex justify-between font-bold text-slate-700 mb-2">
+                              <span>{group.name}</span>
+                              <span className="bg-blue-100 text-blue-700 px-2 rounded text-xs flex items-center">{group.studentCount} est.</span>
+                            </div>
+                            <div className="text-xs text-slate-500">
+                              Aula sugerida: {state.classrooms.find(c => c.id === group.plannedClassroomId)?.name}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}
@@ -355,129 +354,128 @@ const OfferPlannerView = () => {
               {/* --- EXISTING GROUPS LIST (Editor) --- */}
               {existingGroups.length > 0 && (
                 <div>
-                   <div className="flex justify-between items-center mb-4">
-                      <h3 className="font-bold text-slate-700">Paralelos Activos ({existingGroups.length})</h3>
-                      <button 
-                        onClick={() => {
-                          // Manually add a single group
-                           dispatch({
-                            type: 'ADD_COURSE_GROUP',
-                            payload: {
-                              id: crypto.randomUUID(),
-                              subjectId: selectedSubject.id,
-                              name: `Nuevo Grupo`,
-                              studentCount: 0,
-                              totalHours: selectedSubject.credits,
-                              plannedClassroomId: '' 
-                            }
-                           })
-                        }}
-                        className="text-xs flex items-center gap-1 text-blue-600 hover:text-blue-800 font-bold"
-                      >
-                        <Plus size={14} /> Agregar Manualmente
-                      </button>
-                   </div>
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="font-bold text-slate-700">Paralelos Activos ({existingGroups.length})</h3>
+                    <button
+                      onClick={() => {
+                        // Manually add a single group
+                        dispatch({
+                          type: 'ADD_COURSE_GROUP',
+                          payload: {
+                            id: crypto.randomUUID(),
+                            subjectId: selectedSubject.id,
+                            name: `Nuevo Grupo`,
+                            studentCount: 0,
+                            totalHours: selectedSubject.credits,
+                            plannedClassroomId: ''
+                          }
+                        })
+                      }}
+                      className="text-xs flex items-center gap-1 text-blue-600 hover:text-blue-800 font-bold"
+                    >
+                      <Plus size={14} /> Agregar Manualmente
+                    </button>
+                  </div>
 
-                   <div className="space-y-4">
-                      {existingGroups.map(group => {
-                        const assignedTeacher = state.teachers.find(t => t.id === group.teacherId);
-                        
-                        // Calculate base load (everything EXCEPT this group)
-                        const baseLoad = assignedTeacher ? getTeacherTotalLoad(assignedTeacher.id, group.id) : 0;
-                        const projectedLoadIfKept = baseLoad + group.totalHours;
-                        const isOverloaded = assignedTeacher && projectedLoadIfKept > assignedTeacher.maxHours;
+                  <div className="space-y-4">
+                    {existingGroups.map(group => {
+                      const assignedTeacher = state.teachers.find(t => t.id === group.teacherId);
 
-                        return (
-                          <div key={group.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 items-start md:items-center">
-                             
-                             {/* Group Info */}
-                             <div className="min-w-[120px]">
-                                <h4 className="font-bold text-slate-800 text-lg">{group.name}</h4>
-                                <div className="flex items-center gap-1 text-sm text-slate-500 bg-slate-100 px-2 py-1 rounded w-fit mt-1">
-                                  <Users size={14} />
-                                  <input 
-                                    type="number" 
-                                    value={group.studentCount}
-                                    onChange={(e) => dispatch({ 
-                                      type: 'UPDATE_COURSE_GROUP', 
-                                      payload: { ...group, studentCount: parseInt(e.target.value) || 0 }
-                                    })}
-                                    className="bg-transparent w-10 outline-none text-center font-bold"
-                                  />
-                                  <span>est.</span>
-                                </div>
-                             </div>
+                      // Calculate base load (everything EXCEPT this group)
+                      const baseLoad = assignedTeacher ? getTeacherTotalLoad(assignedTeacher.id, group.id) : 0;
+                      const projectedLoadIfKept = baseLoad + group.totalHours;
+                      const isOverloaded = assignedTeacher && projectedLoadIfKept > assignedTeacher.maxHours;
 
-                             {/* Teacher Selector */}
-                             <div className="flex-1 w-full">
-                                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Docente Asignado</label>
-                                <select 
-                                  className={`w-full px-3 py-2 border rounded-lg text-sm bg-white text-slate-900 transition-colors ${
-                                    !group.teacherId 
-                                      ? 'border-amber-300 bg-amber-50 text-amber-900' 
-                                      : isOverloaded 
-                                        ? 'border-red-300 bg-red-50 text-red-900' 
-                                        : 'border-slate-300 bg-white text-slate-900'
-                                  }`}
-                                  value={group.teacherId || ''}
-                                  onChange={(e) => handleUpdateGroupTeacher(group, e.target.value)}
-                                >
-                                  <option value="">-- Sin Asignar --</option>
-                                  {state.teachers.map(t => {
-                                    // Calculate projected load if we select THIS teacher
-                                    const tBaseLoad = getTeacherTotalLoad(t.id, group.id); // Exclude current group from base
-                                    const tProjected = tBaseLoad + group.totalHours;
-                                    const willBeOverloaded = tProjected > t.maxHours;
-                                    
-                                    return (
-                                      <option key={t.id} value={t.id} className={willBeOverloaded ? 'text-red-500' : ''}>
-                                        {t.name} (Total: {tProjected}/{t.maxHours}h) {willBeOverloaded ? '⚠️' : ''}
-                                      </option>
-                                    );
-                                  })}
-                                </select>
-                                {isOverloaded && (
-                                  <div className="text-[10px] text-red-600 font-bold mt-1 flex items-center gap-1">
-                                    <AlertTriangle size={10} /> Carga excedida ({projectedLoadIfKept}/{assignedTeacher?.maxHours}h)
-                                  </div>
-                                )}
-                             </div>
+                      return (
+                        <div key={group.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 items-start md:items-center">
 
-                             {/* Classroom Selector (The requested feature: change room per group) */}
-                             <div className="flex-1 w-full">
-                                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Aula Preferida</label>
-                                <select 
-                                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white text-slate-900"
-                                  value={group.plannedClassroomId || ''}
-                                  onChange={(e) => handleUpdateGroupRoom(group, e.target.value)}
-                                >
-                                  <option value="">-- Cualquiera --</option>
-                                  {state.classrooms.map(c => {
-                                    // Validation: Is room big enough?
-                                    const isTooSmall = c.maxCapacity < group.studentCount;
-                                    return (
-                                      <option key={c.id} value={c.id} className={isTooSmall ? 'text-red-500' : ''}>
-                                        {c.name} (Cap: {c.maxCapacity}) {isTooSmall ? '⚠️' : ''}
-                                      </option>
-                                    );
-                                  })}
-                                </select>
-                             </div>
-
-                             {/* Actions */}
-                             <button 
-                               type="button"
-                               onClick={() => handleDeleteGroupClick(group.id)}
-                               className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                               title="Eliminar paralelo"
-                             >
-                               <Trash2 size={18} />
-                             </button>
-
+                          {/* Group Info */}
+                          <div className="min-w-[120px]">
+                            <h4 className="font-bold text-slate-800 text-lg">{group.name}</h4>
+                            <div className="flex items-center gap-1 text-sm text-slate-500 bg-slate-100 px-2 py-1 rounded w-fit mt-1">
+                              <Users size={14} />
+                              <input
+                                type="number"
+                                value={group.studentCount}
+                                onChange={(e) => dispatch({
+                                  type: 'UPDATE_COURSE_GROUP',
+                                  payload: { ...group, studentCount: parseInt(e.target.value) || 0 }
+                                })}
+                                className="bg-transparent w-10 outline-none text-center font-bold"
+                              />
+                              <span>est.</span>
+                            </div>
                           </div>
-                        );
-                      })}
-                   </div>
+
+                          {/* Teacher Selector */}
+                          <div className="flex-1 w-full">
+                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Docente Asignado</label>
+                            <select
+                              className={`w-full px-3 py-2 border rounded-lg text-sm bg-white text-slate-900 transition-colors ${!group.teacherId
+                                ? 'border-amber-300 bg-amber-50 text-amber-900'
+                                : isOverloaded
+                                  ? 'border-red-300 bg-red-50 text-red-900'
+                                  : 'border-slate-300 bg-white text-slate-900'
+                                }`}
+                              value={group.teacherId || ''}
+                              onChange={(e) => handleUpdateGroupTeacher(group, e.target.value)}
+                            >
+                              <option value="">-- Sin Asignar --</option>
+                              {state.teachers.map(t => {
+                                // Calculate projected load if we select THIS teacher
+                                const tBaseLoad = getTeacherTotalLoad(t.id, group.id); // Exclude current group from base
+                                const tProjected = tBaseLoad + group.totalHours;
+                                const willBeOverloaded = tProjected > t.maxHours;
+
+                                return (
+                                  <option key={t.id} value={t.id} className={willBeOverloaded ? 'text-red-500' : ''}>
+                                    {t.name} (Total: {tProjected}/{t.maxHours}h) {willBeOverloaded ? '⚠️' : ''}
+                                  </option>
+                                );
+                              })}
+                            </select>
+                            {isOverloaded && (
+                              <div className="text-[10px] text-red-600 font-bold mt-1 flex items-center gap-1">
+                                <AlertTriangle size={10} /> Carga excedida ({projectedLoadIfKept}/{assignedTeacher?.maxHours}h)
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Classroom Selector (The requested feature: change room per group) */}
+                          <div className="flex-1 w-full">
+                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Aula Preferida</label>
+                            <select
+                              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white text-slate-900"
+                              value={group.plannedClassroomId || ''}
+                              onChange={(e) => handleUpdateGroupRoom(group, e.target.value)}
+                            >
+                              <option value="">-- Cualquiera --</option>
+                              {state.classrooms.map(c => {
+                                // Validation: Is room big enough?
+                                const isTooSmall = c.maxCapacity < group.studentCount;
+                                return (
+                                  <option key={c.id} value={c.id} className={isTooSmall ? 'text-red-500' : ''}>
+                                    {c.name} (Cap: {c.maxCapacity}) {isTooSmall ? '⚠️' : ''}
+                                  </option>
+                                );
+                              })}
+                            </select>
+                          </div>
+
+                          {/* Actions */}
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteGroupClick(group.id)}
+                            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Eliminar paralelo"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>
@@ -486,34 +484,34 @@ const OfferPlannerView = () => {
 
         {/* Delete Confirmation Modal */}
         <Modal
-            isOpen={!!groupToDelete}
-            onClose={() => setGroupToDelete(null)}
-            title="Eliminar Paralelo"
-            maxWidth="max-w-sm"
+          isOpen={!!groupToDelete}
+          onClose={() => setGroupToDelete(null)}
+          title="Eliminar Paralelo"
+          maxWidth="max-w-sm"
         >
-            <div className="space-y-4">
-                <div className="flex items-center gap-3 text-red-600 bg-red-50 p-3 rounded-lg border border-red-100">
-                   <AlertTriangle size={24} className="shrink-0" />
-                   <p className="text-sm font-medium">Esta acción es irreversible y eliminará todas las clases agendadas para este grupo.</p>
-                </div>
-                <p className="text-slate-600 text-sm">
-                    ¿Estás seguro de que deseas eliminar este paralelo?
-                </p>
-                <div className="flex justify-end gap-2 pt-2">
-                    <button 
-                        onClick={() => setGroupToDelete(null)}
-                        className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium transition-colors"
-                    >
-                        Cancelar
-                    </button>
-                    <button 
-                        onClick={confirmDeleteGroup}
-                        className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold transition-colors shadow-sm"
-                    >
-                        Sí, Eliminar
-                    </button>
-                </div>
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 text-red-600 bg-red-50 p-3 rounded-lg border border-red-100">
+              <AlertTriangle size={24} className="shrink-0" />
+              <p className="text-sm font-medium">Esta acción es irreversible y eliminará todas las clases agendadas para este grupo.</p>
             </div>
+            <p className="text-slate-600 text-sm">
+              ¿Estás seguro de que deseas eliminar este paralelo?
+            </p>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                onClick={() => setGroupToDelete(null)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmDeleteGroup}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold transition-colors shadow-sm"
+              >
+                Sí, Eliminar
+              </button>
+            </div>
+          </div>
         </Modal>
       </div>
     </div>
@@ -531,35 +529,39 @@ const TeachersView = () => {
     email: '',
     maxHours: 21,
     color: '#3B82F6',
-    unavailableSlots: []
+    unavailableSlots: [],
+    allowedSubjectIds: []
   });
-  
+
   // Controls if we are showing the custom input field
   const [isCustomHoursMode, setIsCustomHoursMode] = useState(false);
-  
+
   // Matrix helpers
   const timeSlots = generateTimeSlots();
   const days: DayOfWeek[] = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
   const colors = [
-    '#EF4444', '#F97316', '#F59E0B', '#84CC16', '#10B981', 
+    '#EF4444', '#F97316', '#F59E0B', '#84CC16', '#10B981',
     '#06B6D4', '#3B82F6', '#6366F1', '#8B5CF6', '#EC4899', '#64748B'
   ];
 
   const handleOpenModal = (teacher?: Teacher) => {
     if (teacher) {
       setEditingTeacher(teacher);
-      setFormData(teacher);
-      // If the hours are not 15 or 21, enable custom mode automatically
+      setFormData({
+        ...teacher,
+        allowedSubjectIds: teacher.allowedSubjectIds || []
+      });
       setIsCustomHoursMode(![15, 21].includes(teacher.maxHours));
     } else {
       setEditingTeacher(null);
-      setFormData({ 
-        name: '', 
-        email: '', 
-        maxHours: 21, 
+      setFormData({
+        name: '',
+        email: '',
+        maxHours: 21,
         color: colors[Math.floor(Math.random() * colors.length)],
-        unavailableSlots: []
+        unavailableSlots: [],
+        allowedSubjectIds: []
       });
       setIsCustomHoursMode(false);
     }
@@ -571,17 +573,17 @@ const TeachersView = () => {
     if (!formData.name) return;
 
     if (editingTeacher) {
-      dispatch({ 
-        type: 'UPDATE_TEACHER', 
-        payload: { ...editingTeacher, ...formData } as Teacher 
+      dispatch({
+        type: 'UPDATE_TEACHER',
+        payload: { ...editingTeacher, ...formData } as Teacher
       });
     } else {
-      dispatch({ 
-        type: 'ADD_TEACHER', 
-        payload: { 
-          id: crypto.randomUUID(), 
-          ...formData 
-        } as Teacher 
+      dispatch({
+        type: 'ADD_TEACHER',
+        payload: {
+          id: crypto.randomUUID(),
+          ...(formData as Teacher)
+        }
       });
     }
     setIsModalOpen(false);
@@ -597,7 +599,6 @@ const TeachersView = () => {
   const toggleSlotAvailability = (day: DayOfWeek, slotId: string) => {
     const key = `${day}-${slotId}`;
     const currentUnavailable = formData.unavailableSlots || [];
-    
     let newUnavailable;
     if (currentUnavailable.includes(key)) {
       newUnavailable = currentUnavailable.filter(k => k !== key);
@@ -611,13 +612,10 @@ const TeachersView = () => {
     const dayKeys = timeSlots.map(slot => `${day}-${slot.id}`);
     const currentUnavailable = formData.unavailableSlots || [];
     const allBlocked = dayKeys.every(key => currentUnavailable.includes(key));
-
     let newUnavailable;
     if (allBlocked) {
-      // Unblock all
       newUnavailable = currentUnavailable.filter(k => !dayKeys.includes(k));
     } else {
-      // Block all (add missing ones)
       const missing = dayKeys.filter(k => !currentUnavailable.includes(k));
       newUnavailable = [...currentUnavailable, ...missing];
     }
@@ -631,7 +629,7 @@ const TeachersView = () => {
           <h2 className="text-2xl font-bold text-slate-800">Docentes</h2>
           <p className="text-slate-500 text-sm">Gestiona la planta docente y sus cargas horarias.</p>
         </div>
-        <button 
+        <button
           onClick={() => handleOpenModal()}
           className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors shadow-sm"
         >
@@ -642,9 +640,8 @@ const TeachersView = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {state.teachers.map((teacher) => {
-          // Calculate stats for the card
           const teacherAssignments = state.assignments.filter(a => a.teacherId === teacher.id);
-          const assignedHours = teacherAssignments.length; // Assuming 1 slot = 1 hour
+          const assignedHours = teacherAssignments.length;
           const uniqueSubjectIds = Array.from(new Set(teacherAssignments.map(a => a.subjectId)));
           const subjectNames = uniqueSubjectIds
             .map(sid => state.subjects.find(s => s.id === sid)?.name)
@@ -652,111 +649,118 @@ const TeachersView = () => {
 
           return (
             <div key={teacher.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 hover:shadow-md transition-shadow relative group">
-               <div className="absolute top-4 right-4 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button 
-                    onClick={() => handleOpenModal(teacher)}
-                    className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded"
-                  >
-                    <Edit size={16} />
-                  </button>
-                  <button 
-                    onClick={() => handleDelete(teacher.id)}
-                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-               </div>
+              <div className="absolute top-4 right-4 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  onClick={() => handleOpenModal(teacher)}
+                  className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded"
+                >
+                  <Edit size={16} />
+                </button>
+                <button
+                  onClick={() => handleDelete(teacher.id)}
+                  className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
 
-               <div className="flex items-start space-x-4">
-                  <div 
-                    className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg shrink-0"
-                    style={{ backgroundColor: teacher.color }}
-                  >
-                    {teacher.name.charAt(0)}
+              <div className="flex items-start space-x-4">
+                <div
+                  className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg shrink-0"
+                  style={{ backgroundColor: teacher.color }}
+                >
+                  {teacher.name.charAt(0)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-slate-800 truncate">{teacher.name}</h3>
+                  <div className="flex items-center text-slate-500 text-xs mt-1 space-x-2">
+                    <Mail size={12} />
+                    <span className="truncate">{teacher.email || 'Sin correo'}</span>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-slate-800 truncate">{teacher.name}</h3>
-                    <div className="flex items-center text-slate-500 text-xs mt-1 space-x-2">
-                      <Mail size={12} />
-                      <span className="truncate">{teacher.email || 'Sin correo'}</span>
-                    </div>
-                  </div>
-               </div>
-
-               <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between gap-2">
-                  <div className="flex items-center space-x-2 text-sm text-slate-600 shrink-0">
-                    <Clock size={16} className="text-slate-400" />
-                    <span>
-                      <span className={assignedHours > teacher.maxHours ? "text-red-600 font-bold" : "font-semibold text-slate-800"}>
-                        {assignedHours}
-                      </span>
-                      <span className="text-slate-400 mx-1">/</span>
-                      <span className="text-slate-500">{teacher.maxHours}h</span>
-                    </span>
-                  </div>
-                  
-                  <div className="flex-1 flex justify-end">
-                    {subjectNames.length > 0 ? (
-                      <div className="flex flex-wrap gap-1 justify-end">
-                        {subjectNames.slice(0, 2).map(name => (
-                          <span key={name} className="text-[10px] bg-slate-50 text-slate-600 px-2 py-0.5 rounded-full border border-slate-200 max-w-[100px] truncate">
-                            {name}
-                          </span>
-                        ))}
-                        {subjectNames.length > 2 && (
-                          <span className="text-[10px] bg-slate-50 text-slate-400 px-1.5 py-0.5 rounded-full border border-slate-200">
-                            +{subjectNames.length - 2}
-                          </span>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-[10px] text-slate-400 italic">Sin asignación</span>
+                  {/* Specialty Badges */}
+                  <div className="mt-3 flex flex-wrap gap-1">
+                    {teacher.allowedSubjectIds?.map(sid => {
+                      const s = state.subjects.find(sub => sub.id === sid);
+                      if (!s) return null;
+                      return (
+                        <span key={sid} className="text-[9px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-100 font-medium">
+                          {s.name}
+                        </span>
+                      );
+                    })}
+                    {(!teacher.allowedSubjectIds || teacher.allowedSubjectIds.length === 0) && (
+                      <span className="text-[9px] text-slate-400 italic">Sin especialidades</span>
                     )}
                   </div>
-               </div>
+                </div>
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between gap-2">
+                <div className="flex items-center space-x-2 text-sm text-slate-600 shrink-0">
+                  <Clock size={16} className="text-slate-400" />
+                  <span>
+                    <span className={assignedHours > teacher.maxHours ? "text-red-600 font-bold" : "font-semibold text-slate-800"}>
+                      {assignedHours}
+                    </span>
+                    <span className="text-slate-400 mx-1">/</span>
+                    <span className="text-slate-500">{teacher.maxHours}h</span>
+                  </span>
+                </div>
+
+                <div className="flex-1 flex justify-end">
+                  {subjectNames.length > 0 ? (
+                    <div className="flex flex-wrap gap-1 justify-end">
+                      {subjectNames.slice(0, 2).map(name => (
+                        <span key={name} className="text-[10px] bg-slate-50 text-slate-600 px-2 py-0.5 rounded-full border border-slate-200 max-w-[100px] truncate">
+                          {name}
+                        </span>
+                      ))}
+                      {subjectNames.length > 2 && (
+                        <span className="text-[10px] bg-slate-50 text-slate-400 px-1.5 py-0.5 rounded-full border border-slate-200">
+                          +{subjectNames.length - 2}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-[10px] text-slate-400 italic">Sin asignación</span>
+                  )}
+                </div>
+              </div>
             </div>
           );
         })}
       </div>
 
-      {/* CREATE / EDIT MODAL - Now Wider */}
-      <Modal 
-        isOpen={isModalOpen} 
+      <Modal
+        isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title={editingTeacher ? 'Editar Docente' : 'Nuevo Docente'}
         maxWidth="max-w-5xl"
       >
         <form onSubmit={handleSubmit} className="flex flex-col h-full">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            {/* Left Column: Basic Info (4 columns) */}
             <div className="lg:col-span-4 space-y-5">
-              <div className="bg-blue-50/50 p-4 rounded-lg border border-blue-100 mb-2">
+              <div className="bg-blue-50/50 p-4 rounded-lg border border-blue-100">
                 <h4 className="text-sm font-bold text-blue-800 mb-2 flex items-center">
-                  <Users size={16} className="mr-2" />
-                  Información Personal
+                  <Users size={16} className="mr-2" /> Información Personal
                 </h4>
                 <div className="space-y-4">
                   <div>
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Nombre Completo</label>
-                    <input 
-                      autoFocus
-                      type="text" 
-                      required
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-slate-900 bg-white"
-                      value={formData.name}
-                      onChange={e => setFormData({...formData, name: e.target.value})}
-                      placeholder="Ej. Juan Pérez"
+                    <input
+                      autoFocus type="text" required
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 bg-white"
+                      value={formData.name || ''}
+                      onChange={e => setFormData({ ...formData, name: e.target.value })}
                     />
                   </div>
-                  
                   <div>
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Correo Electrónico</label>
-                    <input 
-                      type="email" 
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-slate-900 bg-white"
+                    <input
+                      type="email"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 bg-white"
                       value={formData.email || ''}
-                      onChange={e => setFormData({...formData, email: e.target.value})}
-                      placeholder="juan@universidad.edu"
+                      onChange={e => setFormData({ ...formData, email: e.target.value })}
                     />
                   </div>
                 </div>
@@ -764,179 +768,108 @@ const TeachersView = () => {
 
               <div className="p-4 border border-slate-200 rounded-lg">
                 <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center">
-                   <Clock size={16} className="mr-2 text-slate-400" />
-                   Carga Horaria
+                  <Clock size={16} className="mr-2 text-slate-400" /> Carga Horaria
                 </h4>
-                <div className="space-y-3">
-                  <div className="grid grid-cols-3 gap-2">
-                    {[15, 21].map((hours) => (
-                      <button
-                        key={hours}
-                        type="button"
-                        onClick={() => {
-                          setFormData({...formData, maxHours: hours});
-                          setIsCustomHoursMode(false);
-                        }}
-                        className={`flex flex-col items-center justify-center p-2 border rounded-lg transition-all ${
-                          !isCustomHoursMode && formData.maxHours === hours 
-                            ? 'bg-blue-50 border-blue-500 text-blue-700 ring-1 ring-blue-500' 
-                            : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                        }`}
-                      >
-                        <span className="text-lg font-bold">{hours}h</span>
-                        <span className="text-[10px] uppercase">Semanal</span>
-                      </button>
-                    ))}
+                <div className="grid grid-cols-3 gap-2">
+                  {[15, 21].map((hours) => (
                     <button
-                        type="button"
-                        onClick={() => {
-                          setIsCustomHoursMode(true);
-                        }}
-                        className={`flex flex-col items-center justify-center p-2 border rounded-lg transition-all ${
-                          isCustomHoursMode
-                            ? 'bg-blue-50 border-blue-500 text-blue-700 ring-1 ring-blue-500' 
-                            : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                        }`}
-                      >
-                        <Settings size={20} className="mb-1" />
-                        <span className="text-[10px] uppercase">Otro</span>
+                      key={hours} type="button"
+                      onClick={() => { setFormData({ ...formData, maxHours: hours }); setIsCustomHoursMode(false); }}
+                      className={`p-2 border rounded-lg text-center ${!isCustomHoursMode && formData.maxHours === hours ? 'bg-blue-50 border-blue-500 text-blue-700' : 'border-slate-200 text-slate-600'}`}
+                    >
+                      <span className="block text-lg font-bold">{hours}h</span>
                     </button>
-                  </div>
-                  
-                  {isCustomHoursMode && (
-                    <div className="animate-fade-in">
-                      <div className="flex items-center border border-slate-300 rounded-lg px-3 py-2 focus-within:ring-2 focus-within:ring-blue-500 bg-white">
-                          <input 
-                            type="number"
-                            min="1"
-                            max="40"
-                            className="w-full outline-none text-slate-900 bg-transparent placeholder-slate-400"
-                            value={formData.maxHours}
-                            onChange={(e) => setFormData({...formData, maxHours: parseInt(e.target.value) || 0})}
-                            placeholder="Ingrese horas"
-                          />
-                          <span className="text-slate-400 text-sm ml-2">Horas/Semana</span>
-                      </div>
-                    </div>
-                  )}
+                  ))}
+                  <button
+                    type="button" onClick={() => setIsCustomHoursMode(true)}
+                    className={`p-2 border rounded-lg flex flex-col items-center justify-center ${isCustomHoursMode ? 'bg-blue-50 border-blue-500 text-blue-700' : 'border-slate-200 text-slate-600'}`}
+                  >
+                    <Settings size={18} />
+                  </button>
+                </div>
+                {isCustomHoursMode && (
+                  <input
+                    type="number" className="w-full mt-2 px-3 py-2 border border-slate-300 rounded-lg outline-none"
+                    value={formData.maxHours || 0}
+                    onChange={(e) => setFormData({ ...formData, maxHours: parseInt(e.target.value) || 0 })}
+                  />
+                )}
+              </div>
+
+              <div className="p-4 border border-slate-200 rounded-lg">
+                <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center">
+                  <Layers size={16} className="mr-2 text-slate-400" /> Especialidades
+                </h4>
+                <div className="max-h-40 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                  {state.subjects.map(subject => {
+                    const isChecked = formData.allowedSubjectIds?.includes(subject.id);
+                    return (
+                      <label key={subject.id} className="flex items-center gap-2 p-1.5 rounded hover:bg-slate-50 cursor-pointer">
+                        <input
+                          type="checkbox" checked={isChecked}
+                          onChange={() => {
+                            const current = formData.allowedSubjectIds || [];
+                            const next = isChecked ? current.filter(id => id !== subject.id) : [...current, subject.id];
+                            setFormData({ ...formData, allowedSubjectIds: next });
+                          }}
+                        />
+                        <span className="text-xs truncate">{subject.name}</span>
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Color de Identificación</label>
-                <div className="flex flex-wrap gap-3">
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Color</label>
+                <div className="flex flex-wrap gap-2">
                   {colors.map((c) => (
                     <button
-                      key={c}
-                      type="button"
-                      onClick={() => setFormData({...formData, color: c})}
-                      className={`w-8 h-8 rounded-full shadow-sm transition-transform hover:scale-110 flex items-center justify-center ${
-                        formData.color === c ? 'ring-2 ring-offset-2 ring-slate-400 scale-110' : ''
-                      }`}
+                      key={c} type="button" onClick={() => setFormData({ ...formData, color: c })}
+                      className={`w-6 h-6 rounded-full ${formData.color === c ? 'ring-2 ring-offset-1 ring-slate-400' : ''}`}
                       style={{ backgroundColor: c }}
-                    >
-                      {formData.color === c && <Check size={14} className="text-white drop-shadow-md" />}
-                    </button>
+                    />
                   ))}
                 </div>
               </div>
             </div>
 
-            {/* Right Column: Availability Matrix (8 columns) */}
-            <div className="lg:col-span-8 flex flex-col h-full">
-               <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 h-full flex flex-col">
-                  <div className="flex items-center justify-between mb-4">
-                      <div>
-                        <h4 className="font-bold text-slate-700 flex items-center gap-2 text-base">
-                          <CalendarDays size={20} className="text-slate-500" />
-                          Matriz de Disponibilidad
-                        </h4>
-                        <p className="text-xs text-slate-500 mt-1">
-                          Define los horarios en los que el docente <strong>NO puede</strong> impartir clases.
-                        </p>
-                      </div>
-                      <div className="flex gap-4 text-xs bg-white px-3 py-2 rounded-lg border border-slate-100 shadow-sm">
-                        <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 bg-white border border-slate-300 rounded-sm"></div>
-                          <span className="text-slate-600 font-medium">Disponible</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 bg-red-50 border border-red-200 rounded-sm flex items-center justify-center">
-                            <X size={10} className="text-red-400" />
-                          </div>
-                          <span className="text-slate-600 font-medium">Bloqueado</span>
-                        </div>
-                      </div>
-                  </div>
-                  
-                  <div className="flex-1 overflow-auto bg-white rounded-lg border border-slate-200 shadow-inner p-1">
-                    <div className="min-w-[600px]">
-                        <div className="grid grid-cols-[100px_repeat(6,1fr)] gap-px bg-slate-100 border border-slate-100">
-                          {/* Header Row */}
-                          <div className="bg-slate-50 sticky top-0 left-0 z-10"></div> {/* Corner */}
-                          {days.map(day => (
-                            <button 
-                              key={day} 
-                              type="button"
-                              onClick={() => toggleDayAvailability(day)}
-                              className="bg-slate-50 p-2 text-center text-xs font-bold text-slate-700 hover:bg-slate-100 sticky top-0 z-0 transition-colors"
-                            >
-                              {day}
-                            </button>
-                          ))}
-
-                          {/* Time Slots */}
-                          {timeSlots.map(slot => (
-                            <React.Fragment key={slot.id}>
-                              {/* Row Header (Time) */}
-                              <div className="bg-slate-50 p-2 text-[10px] font-mono font-medium text-slate-500 flex items-center justify-end border-r border-slate-100 whitespace-nowrap">
-                                {slot.start} - {slot.end}
-                              </div>
-                              
-                              {/* Cells */}
-                              {days.map(day => {
-                                const isUnavailable = formData.unavailableSlots?.includes(`${day}-${slot.id}`);
-                                return (
-                                  <button
-                                    key={`${day}-${slot.id}`}
-                                    type="button"
-                                    onClick={() => toggleSlotAvailability(day, slot.id)}
-                                    className={`h-10 transition-all duration-150 relative group ${
-                                      isUnavailable
-                                        ? 'bg-red-50 hover:bg-red-100'
-                                        : 'bg-white hover:bg-emerald-50'
-                                    }`}
-                                  >
-                                    {isUnavailable && (
-                                      <div className="absolute inset-0 flex items-center justify-center">
-                                        <X size={16} className="text-red-400 opacity-70" />
-                                      </div>
-                                    )}
-                                  </button>
-                                );
-                              })}
-                            </React.Fragment>
-                          ))}
-                        </div>
-                    </div>
-                  </div>
-               </div>
+            <div className="lg:col-span-8 bg-slate-50 p-4 rounded-xl border border-slate-200">
+              <h4 className="font-bold text-slate-700 flex items-center gap-2 mb-4 text-sm">
+                <CalendarDays size={18} /> Disponibilidad (Bloqueos)
+              </h4>
+              <div className="overflow-auto bg-white rounded-lg border border-slate-200 max-h-[500px]">
+                <div className="grid grid-cols-[80px_repeat(6,1fr)] gap-px bg-slate-100">
+                  <div className="bg-slate-50 sticky top-0 left-0 z-20"></div>
+                  {days.map(day => (
+                    <button key={day} type="button" onClick={() => toggleDayAvailability(day)} className="bg-slate-50 p-2 text-center text-[10px] font-bold sticky top-0 z-10">{day}</button>
+                  ))}
+                  {timeSlots.map(slot => (
+                    <React.Fragment key={slot.id}>
+                      <div className="bg-slate-50 p-1 text-[9px] font-mono text-slate-500 text-right pr-2">{slot.start}</div>
+                      {days.map(day => {
+                        const isUnavailable = formData.unavailableSlots?.includes(`${day}-${slot.id}`);
+                        return (
+                          <button
+                            key={`${day}-${slot.id}`} type="button"
+                            onClick={() => toggleSlotAvailability(day, slot.id)}
+                            className={`h-8 border-t border-l border-slate-100 flex items-center justify-center ${isUnavailable ? 'bg-red-50' : 'bg-white'}`}
+                          >
+                            {isUnavailable && <X size={12} className="text-red-300" />}
+                          </button>
+                        );
+                      })}
+                    </React.Fragment>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="pt-6 flex justify-end space-x-3 border-t border-slate-100 mt-6">
-            <button 
-              type="button" 
-              onClick={() => setIsModalOpen(false)}
-              className="px-6 py-2.5 text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg transition-colors font-medium shadow-sm"
-            >
-              Cancelar
-            </button>
-            <button 
-              type="submit" 
-              className="px-6 py-2.5 text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors font-bold shadow-lg shadow-blue-200"
-            >
-              {editingTeacher ? 'Guardar Cambios' : 'Registrar Docente'}
+          <div className="pt-4 flex justify-end gap-3 mt-4 border-t border-slate-100">
+            <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-slate-600">Cancelar</button>
+            <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold">
+              {editingTeacher ? 'Guardar' : 'Crear'}
             </button>
           </div>
         </form>
@@ -949,7 +882,7 @@ const SubjectsView = () => {
   const { state, dispatch } = useAppStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
-  
+
   // Controls if we are showing the custom input field for credits
   const [isCustomCreditsMode, setIsCustomCreditsMode] = useState(false);
 
@@ -957,18 +890,27 @@ const SubjectsView = () => {
     name: '',
     credits: 2,
     projectedStudents: 30,
-    area: 'Audiovisual' // Default
+    area: 'Audiovisual',
+    preferredDays: []
   });
 
   const handleOpenModal = (subject?: Subject) => {
     if (subject) {
       setEditingSubject(subject);
-      setFormData(subject);
-      // Check if credits is one of standard options
+      setFormData({
+        ...subject,
+        preferredDays: subject.preferredDays || []
+      });
       setIsCustomCreditsMode(![1, 2, 3].includes(subject.credits));
     } else {
       setEditingSubject(null);
-      setFormData({ name: '', credits: 2, projectedStudents: 30, area: 'Audiovisual' });
+      setFormData({
+        name: '',
+        credits: 2,
+        projectedStudents: 30,
+        area: 'Audiovisual',
+        preferredDays: []
+      });
       setIsCustomCreditsMode(false);
     }
     setIsModalOpen(true);
@@ -978,9 +920,9 @@ const SubjectsView = () => {
     e.preventDefault();
     if (!formData.name) return;
 
-    const payload = { 
-      ...(editingSubject || { id: crypto.randomUUID() }), 
-      ...formData 
+    const payload = {
+      ...(editingSubject || { id: crypto.randomUUID() }),
+      ...formData
     } as Subject;
 
     if (editingSubject) {
@@ -1006,6 +948,8 @@ const SubjectsView = () => {
     }
   };
 
+  const days: DayOfWeek[] = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -1013,7 +957,7 @@ const SubjectsView = () => {
           <h2 className="text-2xl font-bold text-slate-800">Materias</h2>
           <p className="text-slate-500 text-sm">Define el plan académico y sus áreas.</p>
         </div>
-        <button 
+        <button
           onClick={() => handleOpenModal()}
           className="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition-colors shadow-sm"
         >
@@ -1026,57 +970,67 @@ const SubjectsView = () => {
         {state.subjects.map((subject) => {
           const config = AREA_CONFIG[subject.area] || AREA_CONFIG['Audiovisual'];
           const AreaIcon = getAreaIcon(subject.area);
-          
+
           return (
             <div key={subject.id} className={`bg-white rounded-xl shadow-sm border ${config.border} p-5 hover:shadow-md transition-shadow relative group`}>
-               <div className="absolute top-4 right-4 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button 
-                    onClick={() => handleOpenModal(subject)}
-                    className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded"
-                  >
-                    <Edit size={16} />
-                  </button>
-                  <button 
-                    onClick={() => handleDelete(subject.id)}
-                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-               </div>
+              <div className="absolute top-4 right-4 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  onClick={() => handleOpenModal(subject)}
+                  className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded"
+                >
+                  <Edit size={16} />
+                </button>
+                <button
+                  onClick={() => handleDelete(subject.id)}
+                  className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
 
-               <div className="flex items-start space-x-4 mb-4">
-                  <div className={`w-10 h-10 rounded-lg ${config.bg} ${config.iconColor} flex items-center justify-center shrink-0`}>
-                    <AreaIcon size={20} />
+              <div className="flex items-start space-x-4 mb-4">
+                <div className={`w-10 h-10 rounded-lg ${config.bg} ${config.iconColor} flex items-center justify-center shrink-0`}>
+                  <AreaIcon size={20} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-slate-800 line-clamp-2 leading-tight mb-1">{subject.name}</h3>
+                  <div className={`text-[10px] uppercase font-bold tracking-wider ${config.iconColor}`}>
+                    {subject.area}
                   </div>
-                  <div className="flex-1 min-w-0">
-                     {/* Swapped Title and Area Subtitle */}
-                    <h3 className="font-bold text-slate-800 line-clamp-2 leading-tight mb-1">{subject.name}</h3>
-                    <div className={`text-[10px] uppercase font-bold tracking-wider ${config.iconColor}`}>
-                      {subject.area}
-                    </div>
-                  </div>
-               </div>
+                </div>
+              </div>
 
-               <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-4">
-                  <div className="flex flex-col">
-                    <span className="text-xs text-slate-500 uppercase font-semibold">Duración</span>
-                    <div className="flex items-center space-x-1 text-slate-700 font-medium">
-                      <Clock size={14} className="text-slate-400" />
-                      <span>{subject.credits} horas</span>
-                    </div>
+              {/* Preferred Days Display */}
+              {subject.preferredDays && subject.preferredDays.length > 0 && (
+                <div className="mb-4 flex flex-wrap gap-1">
+                  {subject.preferredDays.map(day => (
+                    <span key={day} className="text-[10px] bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded border border-emerald-100 font-medium">
+                      {day.substring(0, 3)}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-4">
+                <div className="flex flex-col">
+                  <span className="text-xs text-slate-500 uppercase font-semibold">Duración</span>
+                  <div className="flex items-center space-x-1 text-slate-700 font-medium">
+                    <Clock size={14} className="text-slate-400" />
+                    <span>{subject.credits} horas</span>
                   </div>
-                  <div className="flex flex-col">
-                    <span className="text-xs text-slate-500 uppercase font-semibold">Proyección</span>
-                    <div className="flex items-center space-x-1 text-slate-700 font-medium">
-                      <Users size={14} className="text-slate-400" />
-                      <span>{subject.projectedStudents} est.</span>
-                    </div>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xs text-slate-500 uppercase font-semibold">Proyección</span>
+                  <div className="flex items-center space-x-1 text-slate-700 font-medium">
+                    <Users size={14} className="text-slate-400" />
+                    <span>{subject.projectedStudents} est.</span>
                   </div>
-               </div>
+                </div>
+              </div>
             </div>
           );
         })}
-        
+
         {state.subjects.length === 0 && (
           <div className="col-span-full py-12 text-center text-slate-400 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
             <BookOpen size={48} className="mx-auto mb-4 opacity-50" />
@@ -1088,22 +1042,22 @@ const SubjectsView = () => {
         )}
       </div>
 
-      <Modal 
-        isOpen={isModalOpen} 
+      <Modal
+        isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title={editingSubject ? 'Editar Materia' : 'Nueva Materia'}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Nombre de la Materia</label>
-            <input 
+            <input
               autoFocus
-              type="text" 
+              type="text"
               required
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all text-slate-900 bg-white"
-              value={formData.name}
-              onChange={e => setFormData({...formData, name: e.target.value})}
-              placeholder="Ej. Cálculo I"
+              value={formData.name || ''}
+              onChange={e => setFormData({ ...formData, name: e.target.value })}
+              placeholder="Ej. Edición de Video"
             />
           </div>
 
@@ -1111,25 +1065,53 @@ const SubjectsView = () => {
             <label className="block text-sm font-medium text-slate-700 mb-2">Eje / Área</label>
             <div className="flex flex-wrap gap-2">
               {(Object.keys(AREA_CONFIG) as SubjectArea[]).map((area) => {
-                 const config = AREA_CONFIG[area];
-                 const isSelected = formData.area === area;
-                 return (
+                const config = AREA_CONFIG[area];
+                const isSelected = formData.area === area;
+                return (
                   <button
                     key={area}
                     type="button"
-                    onClick={() => setFormData({...formData, area})}
-                    className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all flex items-center gap-2 ${
-                      isSelected
-                        ? `${config.bg} ${config.border} ${config.iconColor} ring-1 ring-offset-1 ring-${config.color.split('-')[1]}-400` 
-                        : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
-                    }`}
+                    onClick={() => setFormData({ ...formData, area })}
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all flex items-center gap-2 ${isSelected
+                      ? `${config.bg} ${config.border} ${config.iconColor} ring-1 ring-offset-1 ring-${config.color.split('-')[1]}-400`
+                      : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                      }`}
                   >
                     <div className={`w-2 h-2 rounded-full ${isSelected ? config.iconColor.replace('text', 'bg') : 'bg-slate-300'}`}></div>
                     {area}
                   </button>
-                 );
+                );
               })}
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Días Preferidos (Opcional)</label>
+            <div className="flex flex-wrap gap-2">
+              {days.map(day => {
+                const isSelected = formData.preferredDays?.includes(day);
+                return (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => {
+                      const current = formData.preferredDays || [];
+                      const next = isSelected
+                        ? current.filter(d => d !== day)
+                        : [...current, day];
+                      setFormData({ ...formData, preferredDays: next });
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${isSelected
+                      ? 'bg-emerald-50 border-emerald-500 text-emerald-700'
+                      : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                      }`}
+                  >
+                    {day}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[10px] text-slate-400 mt-1">Si no selecciona ninguno, se asume que puede dictarse cualquier día.</p>
           </div>
 
           <div>
@@ -1140,47 +1122,45 @@ const SubjectsView = () => {
                   key={h}
                   type="button"
                   onClick={() => {
-                    setFormData({...formData, credits: h});
+                    setFormData({ ...formData, credits: h });
                     setIsCustomCreditsMode(false);
                   }}
-                  className={`flex items-center justify-center px-4 py-2 border rounded-lg transition-all ${
-                    !isCustomCreditsMode && formData.credits === h 
-                      ? 'bg-emerald-50 border-emerald-500 text-emerald-700 ring-1 ring-emerald-500' 
-                      : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                  }`}
+                  className={`flex items-center justify-center px-4 py-2 border rounded-lg transition-all ${!isCustomCreditsMode && formData.credits === h
+                    ? 'bg-emerald-50 border-emerald-500 text-emerald-700 ring-1 ring-emerald-500'
+                    : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                    }`}
                 >
                   <span className="font-bold mr-1">{h}</span>
                   {!isCustomCreditsMode && formData.credits === h && <Check size={14} className="ml-0.5" />}
                 </button>
               ))}
-               <button
-                  type="button"
-                  onClick={() => setIsCustomCreditsMode(true)}
-                  className={`flex items-center justify-center px-4 py-2 border rounded-lg transition-all ${
-                    isCustomCreditsMode
-                      ? 'bg-emerald-50 border-emerald-500 text-emerald-700 ring-1 ring-emerald-500' 
-                      : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+              <button
+                type="button"
+                onClick={() => setIsCustomCreditsMode(true)}
+                className={`flex items-center justify-center px-4 py-2 border rounded-lg transition-all ${isCustomCreditsMode
+                  ? 'bg-emerald-50 border-emerald-500 text-emerald-700 ring-1 ring-emerald-500'
+                  : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                   }`}
-                  title="Personalizado"
-                >
-                  <Settings size={16} />
+                title="Personalizado"
+              >
+                <Settings size={16} />
               </button>
             </div>
-            
+
             {isCustomCreditsMode && (
               <div className="mt-3 animate-fade-in">
-                 <div className="flex items-center border border-slate-300 rounded-lg px-3 py-2 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-emerald-500 bg-white">
-                    <input 
-                      type="number"
-                      min="1"
-                      max="8"
-                      className="w-full outline-none text-slate-900 bg-transparent placeholder-slate-400"
-                      value={formData.credits}
-                      onChange={(e) => setFormData({...formData, credits: parseInt(e.target.value) || 0})}
-                      placeholder="Ingrese horas"
-                    />
-                    <span className="text-slate-400 text-sm ml-2">Horas</span>
-                 </div>
+                <div className="flex items-center border border-slate-300 rounded-lg px-3 py-2 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-emerald-500 bg-white">
+                  <input
+                    type="number"
+                    min="1"
+                    max="8"
+                    className="w-full outline-none text-slate-900 bg-transparent placeholder-slate-400"
+                    value={formData.credits || 0}
+                    onChange={(e) => setFormData({ ...formData, credits: parseInt(e.target.value) || 0 })}
+                    placeholder="Ingrese horas"
+                  />
+                  <span className="text-slate-400 text-sm ml-2">Horas</span>
+                </div>
               </div>
             )}
           </div>
@@ -1188,28 +1168,28 @@ const SubjectsView = () => {
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Estudiantes Proyectados</label>
             <div className="flex items-center border border-slate-300 rounded-lg px-3 py-2 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-emerald-500 bg-white">
-              <input 
-                type="number" 
+              <input
+                type="number"
                 min="1"
                 required
                 className="w-full outline-none text-slate-900 bg-transparent placeholder-slate-400"
-                value={formData.projectedStudents}
-                onChange={e => setFormData({...formData, projectedStudents: parseInt(e.target.value) || 0})}
+                value={formData.projectedStudents || 0}
+                onChange={e => setFormData({ ...formData, projectedStudents: parseInt(e.target.value) || 0 })}
               />
               <span className="text-slate-400 text-sm ml-2">Alumnos</span>
             </div>
           </div>
 
           <div className="pt-4 flex space-x-3">
-            <button 
-              type="button" 
+            <button
+              type="button"
               onClick={() => setIsModalOpen(false)}
               className="flex-1 px-4 py-2 text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors font-medium"
             >
               Cancelar
             </button>
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               className="flex-1 px-4 py-2 text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors font-medium shadow-sm"
             >
               Guardar
@@ -1248,9 +1228,9 @@ const ClassroomsView = () => {
     e.preventDefault();
     if (!formData.name) return;
 
-    const payload = { 
-      ...(editingRoom || { id: crypto.randomUUID() }), 
-      ...formData 
+    const payload = {
+      ...(editingRoom || { id: crypto.randomUUID() }),
+      ...formData
     } as Classroom;
 
     if (editingRoom) {
@@ -1282,7 +1262,7 @@ const ClassroomsView = () => {
           <h2 className="text-2xl font-bold text-slate-800">Aulas</h2>
           <p className="text-slate-500 text-sm">Gestiona espacios físicos y sus capacidades.</p>
         </div>
-        <button 
+        <button
           onClick={() => handleOpenModal()}
           className="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors shadow-sm"
         >
@@ -1295,54 +1275,54 @@ const ClassroomsView = () => {
         {state.classrooms.map((room) => {
           const config = CLASSROOM_CONFIG[room.type] || CLASSROOM_CONFIG['Aula'];
           const Icon = getClassroomIcon(room.type);
-          
+
           return (
             <div key={room.id} className={`bg-white rounded-xl shadow-sm border ${config.border} p-5 hover:shadow-md transition-shadow relative group`}>
-               <div className="absolute top-4 right-4 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button 
-                    onClick={() => handleOpenModal(room)}
-                    className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded"
-                  >
-                    <Edit size={16} />
-                  </button>
-                  <button 
-                    onClick={() => handleDelete(room.id)}
-                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-               </div>
+              <div className="absolute top-4 right-4 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  onClick={() => handleOpenModal(room)}
+                  className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded"
+                >
+                  <Edit size={16} />
+                </button>
+                <button
+                  onClick={() => handleDelete(room.id)}
+                  className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
 
-               <div className="flex items-start space-x-4 mb-4">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${config.bg} ${config.iconColor}`}>
-                    <Icon size={20} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-slate-800">{room.name}</h3>
-                    <p className={`text-xs font-semibold ${config.iconColor}`}>{room.type}</p>
-                  </div>
-               </div>
+              <div className="flex items-start space-x-4 mb-4">
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${config.bg} ${config.iconColor}`}>
+                  <Icon size={20} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-slate-800">{room.name}</h3>
+                  <p className={`text-xs font-semibold ${config.iconColor}`}>{room.type}</p>
+                </div>
+              </div>
 
-               <div className="space-y-3 pt-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-600">Recomendado</span>
-                    <span className="font-semibold text-slate-800">{room.recommendedCapacity}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-600">Máximo</span>
-                    <span className="font-semibold text-red-600">{room.maxCapacity}</span>
-                  </div>
-                  
-                  {/* Capacity Visual Bar */}
-                  <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden flex">
-                    <div 
-                      className={`h-full ${config.iconColor.replace('text', 'bg')}`}
-                      style={{ width: `${(room.recommendedCapacity / room.maxCapacity) * 100}%` }} 
-                      title="Recomendado"
-                    />
-                    <div className="bg-red-200 h-full flex-1" title="Zona Crítica" />
-                  </div>
-               </div>
+              <div className="space-y-3 pt-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-600">Recomendado</span>
+                  <span className="font-semibold text-slate-800">{room.recommendedCapacity}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-600">Máximo</span>
+                  <span className="font-semibold text-red-600">{room.maxCapacity}</span>
+                </div>
+
+                {/* Capacity Visual Bar */}
+                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden flex">
+                  <div
+                    className={`h-full ${config.iconColor.replace('text', 'bg')}`}
+                    style={{ width: `${(room.recommendedCapacity / room.maxCapacity) * 100}%` }}
+                    title="Recomendado"
+                  />
+                  <div className="bg-red-200 h-full flex-1" title="Zona Crítica" />
+                </div>
+              </div>
             </div>
           );
         })}
@@ -1358,21 +1338,21 @@ const ClassroomsView = () => {
         )}
       </div>
 
-      <Modal 
-        isOpen={isModalOpen} 
+      <Modal
+        isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title={editingRoom ? 'Editar Aula' : 'Nueva Aula'}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Nombre / Código</label>
-            <input 
+            <input
               autoFocus
-              type="text" 
+              type="text"
               required
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-slate-900 bg-white"
               value={formData.name}
-              onChange={e => setFormData({...formData, name: e.target.value})}
+              onChange={e => setFormData({ ...formData, name: e.target.value })}
               placeholder="Ej. Aula 101, Lab Física"
             />
           </div>
@@ -1381,23 +1361,22 @@ const ClassroomsView = () => {
             <label className="block text-sm font-medium text-slate-700 mb-2">Tipo de Espacio</label>
             <div className="flex flex-wrap gap-2">
               {(Object.keys(CLASSROOM_CONFIG) as ClassroomType[]).map((type) => {
-                 const config = CLASSROOM_CONFIG[type];
-                 const isSelected = formData.type === type;
-                 return (
+                const config = CLASSROOM_CONFIG[type];
+                const isSelected = formData.type === type;
+                return (
                   <button
                     key={type}
                     type="button"
-                    onClick={() => setFormData({...formData, type})}
-                    className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all flex items-center gap-2 ${
-                      isSelected
-                        ? `${config.bg} ${config.border} ${config.iconColor} ring-1 ring-offset-1 ring-${config.color.split('-')[1]}-400` 
-                        : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
-                    }`}
+                    onClick={() => setFormData({ ...formData, type })}
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all flex items-center gap-2 ${isSelected
+                      ? `${config.bg} ${config.border} ${config.iconColor} ring-1 ring-offset-1 ring-${config.color.split('-')[1]}-400`
+                      : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                      }`}
                   >
-                     <div className={`w-2 h-2 rounded-full ${isSelected ? config.iconColor.replace('text', 'bg') : 'bg-slate-300'}`}></div>
+                    <div className={`w-2 h-2 rounded-full ${isSelected ? config.iconColor.replace('text', 'bg') : 'bg-slate-300'}`}></div>
                     <span className="font-medium">{type}</span>
                   </button>
-                 );
+                );
               })}
             </div>
           </div>
@@ -1405,41 +1384,41 @@ const ClassroomsView = () => {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Cap. Recomendada</label>
-              <input 
-                type="number" 
+              <input
+                type="number"
                 min="1"
                 required
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-slate-900 bg-white"
                 value={formData.recommendedCapacity}
-                onChange={e => setFormData({...formData, recommendedCapacity: parseInt(e.target.value) || 0})}
+                onChange={e => setFormData({ ...formData, recommendedCapacity: parseInt(e.target.value) || 0 })}
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Cap. Máxima</label>
-              <input 
-                type="number" 
+              <input
+                type="number"
                 min="1"
                 required
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-slate-900 bg-white"
                 value={formData.maxCapacity}
-                onChange={e => setFormData({...formData, maxCapacity: parseInt(e.target.value) || 0})}
+                onChange={e => setFormData({ ...formData, maxCapacity: parseInt(e.target.value) || 0 })}
               />
             </div>
           </div>
           <p className="text-xs text-slate-400">
-             * La capacidad recomendada se usará para alertas preventivas.
+            * La capacidad recomendada se usará para alertas preventivas.
           </p>
 
           <div className="pt-4 flex space-x-3">
-            <button 
-              type="button" 
+            <button
+              type="button"
               onClick={() => setIsModalOpen(false)}
               className="flex-1 px-4 py-2 text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors font-medium"
             >
               Cancelar
             </button>
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               className="flex-1 px-4 py-2 text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors font-medium shadow-sm"
             >
               Guardar
@@ -1458,18 +1437,18 @@ const ScheduleView = () => {
 
   // View Mode: 'teachers' or 'classrooms'
   const [viewMode, setViewMode] = useState<'teachers' | 'classrooms'>('teachers');
-  
+
   // Selection State
   const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null);
   const [selectedClassroomId, setSelectedClassroomId] = useState<string | null>(null);
 
   // Modal State
   const [selectedCell, setSelectedCell] = useState<{ day: DayOfWeek; slot: TimeSlot } | null>(null);
-  
+
   // Modal Form State
   const [assignMode, setAssignMode] = useState<'group' | 'manual'>('group');
   const [selectedGroupId, setSelectedGroupId] = useState('');
-  
+
   const [formSubjectId, setFormSubjectId] = useState('');
   const [formTeacherId, setFormTeacherId] = useState('');
   const [formClassroomId, setFormClassroomId] = useState('');
@@ -1498,7 +1477,7 @@ const ScheduleView = () => {
   // Helper to open modal based on current context
   const openAssignmentModal = (day: DayOfWeek, slot: TimeSlot) => {
     setSelectedCell({ day, slot });
-    
+
     // Auto-fill context
     if (viewMode === 'teachers' && selectedTeacherId) {
       setFormTeacherId(selectedTeacherId);
@@ -1512,7 +1491,7 @@ const ScheduleView = () => {
     }
     setFormSubjectId('');
     setSelectedGroupId('');
-    
+
     // Default to 'group' mode if there are pending groups, else 'manual'
     setAssignMode(pendingGroups.length > 0 ? 'group' : 'manual');
   };
@@ -1565,7 +1544,7 @@ const ScheduleView = () => {
 
   return (
     <div className="flex h-full gap-4">
-      
+
       {/* LEFT SIDEBAR: PENDING GROUPS */}
       <div className="hidden lg:flex flex-col w-64 bg-white rounded-xl shadow-sm border border-slate-200 shrink-0 overflow-hidden">
         <div className="p-4 border-b border-slate-100 bg-slate-50">
@@ -1575,31 +1554,31 @@ const ScheduleView = () => {
           <p className="text-xs text-slate-500">Paralelos por agendar</p>
         </div>
         <div className="flex-1 overflow-y-auto p-2 space-y-2">
-           {pendingGroups.length === 0 ? (
-             <div className="text-center p-4 text-slate-400 text-xs italic">
-               Todo planificado 🎉
-             </div>
-           ) : (
-             pendingGroups.map(group => {
-               const subject = state.subjects.find(s => s.id === group.subjectId);
-               const progress = (group.assignedCount / group.totalHours) * 100;
-               return (
-                 <div key={group.id} className="p-3 bg-white border border-slate-100 rounded-lg shadow-sm hover:border-blue-200 transition-colors">
-                    <div className="flex justify-between items-start mb-1">
-                      <span className="font-bold text-xs text-slate-700 line-clamp-1">{subject?.name}</span>
-                      <span className="text-[10px] font-mono bg-slate-100 px-1.5 rounded">{group.name}</span>
-                    </div>
-                    <div className="flex justify-between items-end text-[10px] text-slate-500 mb-1">
-                       <span>{group.remaining}h restantes</span>
-                       <span>{Math.round(progress)}%</span>
-                    </div>
-                    <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                       <div className="h-full bg-amber-400" style={{ width: `${progress}%` }}></div>
-                    </div>
-                 </div>
-               );
-             })
-           )}
+          {pendingGroups.length === 0 ? (
+            <div className="text-center p-4 text-slate-400 text-xs italic">
+              Todo planificado 🎉
+            </div>
+          ) : (
+            pendingGroups.map(group => {
+              const subject = state.subjects.find(s => s.id === group.subjectId);
+              const progress = (group.assignedCount / group.totalHours) * 100;
+              return (
+                <div key={group.id} className="p-3 bg-white border border-slate-100 rounded-lg shadow-sm hover:border-blue-200 transition-colors">
+                  <div className="flex justify-between items-start mb-1">
+                    <span className="font-bold text-xs text-slate-700 line-clamp-1">{subject?.name}</span>
+                    <span className="text-[10px] font-mono bg-slate-100 px-1.5 rounded">{group.name}</span>
+                  </div>
+                  <div className="flex justify-between items-end text-[10px] text-slate-500 mb-1">
+                    <span>{group.remaining}h restantes</span>
+                    <span>{Math.round(progress)}%</span>
+                  </div>
+                  <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-amber-400" style={{ width: `${progress}%` }}></div>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
 
@@ -1611,27 +1590,25 @@ const ScheduleView = () => {
             <h2 className="text-2xl font-bold text-slate-800">Planificador</h2>
             <p className="text-slate-500 text-sm">Organiza las clases de la semana.</p>
           </div>
-          
+
           {/* TABS */}
           <div className="flex bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
             <button
               onClick={() => handleTabChange('teachers')}
-              className={`px-4 py-2 rounded-md text-sm font-bold flex items-center gap-2 transition-all ${
-                viewMode === 'teachers' 
-                  ? 'bg-blue-50 text-blue-700 shadow-sm' 
-                  : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-              }`}
+              className={`px-4 py-2 rounded-md text-sm font-bold flex items-center gap-2 transition-all ${viewMode === 'teachers'
+                ? 'bg-blue-50 text-blue-700 shadow-sm'
+                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                }`}
             >
               <User size={18} />
               Docentes
             </button>
             <button
               onClick={() => handleTabChange('classrooms')}
-              className={`px-4 py-2 rounded-md text-sm font-bold flex items-center gap-2 transition-all ${
-                viewMode === 'classrooms' 
-                  ? 'bg-indigo-50 text-indigo-700 shadow-sm' 
-                  : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-              }`}
+              className={`px-4 py-2 rounded-md text-sm font-bold flex items-center gap-2 transition-all ${viewMode === 'classrooms'
+                ? 'bg-indigo-50 text-indigo-700 shadow-sm'
+                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                }`}
             >
               <MapPin size={18} />
               Aulas
@@ -1642,70 +1619,67 @@ const ScheduleView = () => {
         {/* SELECTION BAR (Horizontal Scroll) */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 shrink-0">
           <p className="text-xs font-bold text-slate-400 uppercase mb-3 ml-1">
-              {viewMode === 'teachers' ? 'Selecciona un Docente' : 'Selecciona un Aula'}
+            {viewMode === 'teachers' ? 'Selecciona un Docente' : 'Selecciona un Aula'}
           </p>
-          
+
           <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-              {viewMode === 'teachers' ? (
-                // TEACHERS LIST
-                state.teachers.length > 0 ? (
-                  state.teachers.map(t => (
-                    <button
-                      key={t.id}
-                      onClick={() => setSelectedTeacherId(t.id)}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all min-w-[160px] ${
-                        selectedTeacherId === t.id
-                          ? 'bg-blue-600 border-blue-600 text-white shadow-md'
-                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+            {viewMode === 'teachers' ? (
+              // TEACHERS LIST
+              state.teachers.length > 0 ? (
+                state.teachers.map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => setSelectedTeacherId(t.id)}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all min-w-[160px] ${selectedTeacherId === t.id
+                      ? 'bg-blue-600 border-blue-600 text-white shadow-md'
+                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
                       }`}
+                  >
+                    <div
+                      className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${selectedTeacherId === t.id ? 'bg-white text-blue-600' : 'text-white'
+                        }`}
+                      style={{ backgroundColor: selectedTeacherId === t.id ? undefined : t.color }}
                     >
-                      <div 
-                        className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
-                          selectedTeacherId === t.id ? 'bg-white text-blue-600' : 'text-white'
-                        }`}
-                        style={{ backgroundColor: selectedTeacherId === t.id ? undefined : t.color }}
-                      >
-                        {t.name.charAt(0)}
-                      </div>
-                      <span className="text-sm font-medium truncate">{t.name}</span>
-                    </button>
-                  ))
-                ) : (
-                  <div className="text-sm text-slate-400 italic px-2">No hay docentes registrados.</div>
-                )
+                      {t.name.charAt(0)}
+                    </div>
+                    <span className="text-sm font-medium truncate">{t.name}</span>
+                  </button>
+                ))
               ) : (
-                // CLASSROOMS LIST
-                state.classrooms.length > 0 ? (
-                  state.classrooms.map(c => {
-                    const config = CLASSROOM_CONFIG[c.type];
-                    return (
-                      <button
-                        key={c.id}
-                        onClick={() => setSelectedClassroomId(c.id)}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all min-w-[140px] ${
-                          selectedClassroomId === c.id
-                            ? 'bg-indigo-600 border-indigo-600 text-white shadow-md'
-                            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                <div className="text-sm text-slate-400 italic px-2">No hay docentes registrados.</div>
+              )
+            ) : (
+              // CLASSROOMS LIST
+              state.classrooms.length > 0 ? (
+                state.classrooms.map(c => {
+                  const config = CLASSROOM_CONFIG[c.type];
+                  return (
+                    <button
+                      key={c.id}
+                      onClick={() => setSelectedClassroomId(c.id)}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all min-w-[140px] ${selectedClassroomId === c.id
+                        ? 'bg-indigo-600 border-indigo-600 text-white shadow-md'
+                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
                         }`}
-                      >
-                        <div className={`w-2 h-2 rounded-full ${selectedClassroomId === c.id ? 'bg-white' : config.iconColor.replace('text', 'bg')}`}></div>
-                        <div className="flex flex-col items-start">
-                          <span className="text-sm font-bold leading-none">{c.name}</span>
-                          <span className={`text-[10px] leading-none mt-1 ${selectedClassroomId === c.id ? 'text-indigo-200' : 'text-slate-400'}`}>{c.type}</span>
-                        </div>
-                      </button>
-                    );
-                  })
-                ) : (
-                  <div className="text-sm text-slate-400 italic px-2">No hay aulas registradas.</div>
-                )
-              )}
+                    >
+                      <div className={`w-2 h-2 rounded-full ${selectedClassroomId === c.id ? 'bg-white' : config.iconColor.replace('text', 'bg')}`}></div>
+                      <div className="flex flex-col items-start">
+                        <span className="text-sm font-bold leading-none">{c.name}</span>
+                        <span className={`text-[10px] leading-none mt-1 ${selectedClassroomId === c.id ? 'text-indigo-200' : 'text-slate-400'}`}>{c.type}</span>
+                      </div>
+                    </button>
+                  );
+                })
+              ) : (
+                <div className="text-sm text-slate-400 italic px-2">No hay aulas registradas.</div>
+              )
+            )}
           </div>
         </div>
 
         {/* SCHEDULE GRID */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col flex-1 min-h-0 relative">
-          
+
           {/* Empty State Overlay if no selection */}
           {((viewMode === 'teachers' && !selectedTeacherId) || (viewMode === 'classrooms' && !selectedClassroomId)) && (
             <div className="absolute inset-0 z-10 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center text-center p-8">
@@ -1735,124 +1709,123 @@ const ScheduleView = () => {
           <div className="overflow-y-auto flex-1">
             <div className="grid grid-cols-[80px_repeat(6,1fr)]">
               {timeSlots.map((slot) => (
-                  <React.Fragment key={slot.id}>
-                    {/* Time Label */}
-                    <div className="p-2 border-b border-r border-slate-100 bg-slate-50 text-[10px] font-mono text-slate-500 flex flex-col items-center justify-center text-center">
-                        <span>{slot.start}</span>
-                        <span className="w-full h-px bg-slate-200 my-1"></span>
-                        <span>{slot.end}</span>
-                    </div>
+                <React.Fragment key={slot.id}>
+                  {/* Time Label */}
+                  <div className="p-2 border-b border-r border-slate-100 bg-slate-50 text-[10px] font-mono text-slate-500 flex flex-col items-center justify-center text-center">
+                    <span>{slot.start}</span>
+                    <span className="w-full h-px bg-slate-200 my-1"></span>
+                    <span>{slot.end}</span>
+                  </div>
 
-                    {/* Days Columns */}
-                    {days.map((day) => {
-                        // Filter logic based on viewMode
-                        let assignment: ScheduleAssignment | undefined;
-                        let isBlocked = false;
+                  {/* Days Columns */}
+                  {days.map((day) => {
+                    // Filter logic based on viewMode
+                    let assignment: ScheduleAssignment | undefined;
+                    let isBlocked = false;
 
-                        if (viewMode === 'teachers' && selectedTeacherId) {
-                          assignment = state.assignments.find(a => 
-                            a.day === day && 
-                            a.timeSlotId === slot.id && 
-                            a.teacherId === selectedTeacherId
-                          );
-                          
-                          // Check blocked slots for teacher
-                          const teacher = state.teachers.find(t => t.id === selectedTeacherId);
-                          if (teacher && teacher.unavailableSlots?.includes(`${day}-${slot.id}`)) {
-                            isBlocked = true;
-                          }
+                    if (viewMode === 'teachers' && selectedTeacherId) {
+                      assignment = state.assignments.find(a =>
+                        a.day === day &&
+                        a.timeSlotId === slot.id &&
+                        a.teacherId === selectedTeacherId
+                      );
 
-                        } else if (viewMode === 'classrooms' && selectedClassroomId) {
-                          assignment = state.assignments.find(a => 
-                            a.day === day && 
-                            a.timeSlotId === slot.id && 
-                            a.classroomId === selectedClassroomId
-                          );
-                        }
+                      // Check blocked slots for teacher
+                      const teacher = state.teachers.find(t => t.id === selectedTeacherId);
+                      if (teacher && teacher.unavailableSlots?.includes(`${day}-${slot.id}`)) {
+                        isBlocked = true;
+                      }
 
-                        // Render Assignment Card
-                        if (assignment) {
-                          const subject = state.subjects.find(s => s.id === assignment.subjectId);
-                          const teacher = state.teachers.find(t => t.id === assignment.teacherId);
-                          const room = state.classrooms.find(c => c.id === assignment.classroomId);
-                          const areaConfig = subject ? AREA_CONFIG[subject.area] : AREA_CONFIG['Audiovisual'];
-                          const group = state.courseGroups.find(g => g.id === assignment?.courseGroupId);
+                    } else if (viewMode === 'classrooms' && selectedClassroomId) {
+                      assignment = state.assignments.find(a =>
+                        a.day === day &&
+                        a.timeSlotId === slot.id &&
+                        a.classroomId === selectedClassroomId
+                      );
+                    }
 
-                          return (
-                            <div key={`${day}-${slot.id}`} className="border-b border-r border-slate-100 p-1 min-h-[100px] relative group">
-                              <div className={`w-full h-full rounded p-2 ${areaConfig?.bg} ${areaConfig?.border} border flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow relative overflow-hidden`}>
-                                  
-                                  {/* Header: Depends on View */}
-                                  <div className="mb-1">
-                                    <div className={`text-[10px] font-bold uppercase tracking-wider mb-0.5 ${areaConfig?.iconColor}`}>
-                                        {viewMode === 'teachers' ? room?.name : teacher?.name}
-                                    </div>
-                                    <div className="font-bold text-xs text-slate-800 line-clamp-2 leading-tight">
-                                        {subject?.name}
-                                    </div>
-                                    {group && <div className="text-[10px] bg-white/50 px-1 rounded inline-block mt-0.5">{group.name}</div>}
-                                  </div>
-                                  
-                                  {/* Footer: Depends on View */}
-                                  <div className="mt-1">
-                                    {viewMode === 'teachers' ? (
-                                        // Teacher View: Show nothing extra or maybe time
-                                        <div className="flex items-center gap-1 text-[10px] text-slate-500">
-                                          <Clock size={10} />
-                                          <span>1h</span>
-                                        </div>
-                                    ) : (
-                                        // Classroom View: Show Students + Teacher Info Summary
-                                        <div className="flex flex-col gap-1">
-                                          <div className="flex items-center gap-1.5">
-                                            <Users size={10} className="text-slate-400" />
-                                            <span className="text-[10px] font-medium text-slate-600">
-                                              {subject?.projectedStudents} est.
-                                            </span>
-                                          </div>
-                                        </div>
-                                    )}
-                                  </div>
-                                  
-                                  {/* Hover Actions */}
-                                  <button 
-                                    onClick={() => handleDeleteAssignment(assignment!.id)}
-                                    className="absolute top-1 right-1 p-1 bg-white rounded-full shadow border border-red-100 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50 z-20"
-                                    title="Eliminar asignación"
-                                  >
-                                    <X size={12} />
-                                  </button>
+                    // Render Assignment Card
+                    if (assignment) {
+                      const subject = state.subjects.find(s => s.id === assignment.subjectId);
+                      const teacher = state.teachers.find(t => t.id === assignment.teacherId);
+                      const room = state.classrooms.find(c => c.id === assignment.classroomId);
+                      const areaConfig = subject ? AREA_CONFIG[subject.area] : AREA_CONFIG['Audiovisual'];
+                      const group = state.courseGroups.find(g => g.id === assignment?.courseGroupId);
+
+                      return (
+                        <div key={`${day}-${slot.id}`} className="border-b border-r border-slate-100 p-1 min-h-[100px] relative group">
+                          <div className={`w-full h-full rounded p-2 ${areaConfig?.bg} ${areaConfig?.border} border flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow relative overflow-hidden`}>
+
+                            {/* Header: Depends on View */}
+                            <div className="mb-1">
+                              <div className={`text-[10px] font-bold uppercase tracking-wider mb-0.5 ${areaConfig?.iconColor}`}>
+                                {viewMode === 'teachers' ? room?.name : teacher?.name}
                               </div>
+                              <div className="font-bold text-xs text-slate-800 line-clamp-2 leading-tight">
+                                {subject?.name}
+                              </div>
+                              {group && <div className="text-[10px] bg-white/50 px-1 rounded inline-block mt-0.5">{group.name}</div>}
                             </div>
-                          );
-                        }
 
-                        // Render Empty Cell
-                        return (
-                          <div 
-                            key={`${day}-${slot.id}`} 
-                            className={`border-b border-r border-slate-100 min-h-[100px] p-1 relative group transition-colors ${
-                              isBlocked ? 'bg-slate-100' : 'hover:bg-slate-50'
-                            }`}
-                          >
-                            {!isBlocked ? (
-                              <button 
-                                onClick={() => openAssignmentModal(day, slot)}
-                                // Disable if no selection
-                                disabled={(!selectedTeacherId && viewMode === 'teachers') || (!selectedClassroomId && viewMode === 'classrooms')}
-                                className="w-full h-full rounded border-2 border-dashed border-transparent group-hover:border-slate-200 flex items-center justify-center text-slate-300 group-hover:text-blue-500 transition-all disabled:cursor-not-allowed disabled:group-hover:border-transparent disabled:group-hover:text-slate-300"
-                              >
-                                <Plus size={24} />
-                              </button>
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center opacity-30 cursor-not-allowed" title="Horario bloqueado por el docente">
-                                <Ban size={24} className="text-slate-400" />
-                              </div>
-                            )}
+                            {/* Footer: Depends on View */}
+                            <div className="mt-1">
+                              {viewMode === 'teachers' ? (
+                                // Teacher View: Show nothing extra or maybe time
+                                <div className="flex items-center gap-1 text-[10px] text-slate-500">
+                                  <Clock size={10} />
+                                  <span>1h</span>
+                                </div>
+                              ) : (
+                                // Classroom View: Show Students + Teacher Info Summary
+                                <div className="flex flex-col gap-1">
+                                  <div className="flex items-center gap-1.5">
+                                    <Users size={10} className="text-slate-400" />
+                                    <span className="text-[10px] font-medium text-slate-600">
+                                      {subject?.projectedStudents} est.
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Hover Actions */}
+                            <button
+                              onClick={() => handleDeleteAssignment(assignment!.id)}
+                              className="absolute top-1 right-1 p-1 bg-white rounded-full shadow border border-red-100 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50 z-20"
+                              title="Eliminar asignación"
+                            >
+                              <X size={12} />
+                            </button>
                           </div>
-                        );
-                    })}
-                  </React.Fragment>
+                        </div>
+                      );
+                    }
+
+                    // Render Empty Cell
+                    return (
+                      <div
+                        key={`${day}-${slot.id}`}
+                        className={`border-b border-r border-slate-100 min-h-[100px] p-1 relative group transition-colors ${isBlocked ? 'bg-slate-100' : 'hover:bg-slate-50'
+                          }`}
+                      >
+                        {!isBlocked ? (
+                          <button
+                            onClick={() => openAssignmentModal(day, slot)}
+                            // Disable if no selection
+                            disabled={(!selectedTeacherId && viewMode === 'teachers') || (!selectedClassroomId && viewMode === 'classrooms')}
+                            className="w-full h-full rounded border-2 border-dashed border-transparent group-hover:border-slate-200 flex items-center justify-center text-slate-300 group-hover:text-blue-500 transition-all disabled:cursor-not-allowed disabled:group-hover:border-transparent disabled:group-hover:text-slate-300"
+                          >
+                            <Plus size={24} />
+                          </button>
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center opacity-30 cursor-not-allowed" title="Horario bloqueado por el docente">
+                            <Ban size={24} className="text-slate-400" />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </React.Fragment>
               ))}
             </div>
           </div>
@@ -1873,28 +1846,26 @@ const ScheduleView = () => {
 
           {/* Strategy Switcher */}
           <div className="flex bg-slate-100 p-1 rounded-lg mb-4">
-             <button
-               type="button"
-               onClick={() => setAssignMode('group')}
-               className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${
-                 assignMode === 'group' ? 'bg-white shadow text-blue-700' : 'text-slate-500 hover:text-slate-700'
-               }`}
-             >
-               Planificado (Recomendado)
-             </button>
-             <button
-               type="button"
-               onClick={() => setAssignMode('manual')}
-               className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${
-                 assignMode === 'manual' ? 'bg-white shadow text-blue-700' : 'text-slate-500 hover:text-slate-700'
-               }`}
-             >
-               Manual / Ad-hoc
-             </button>
+            <button
+              type="button"
+              onClick={() => setAssignMode('group')}
+              className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${assignMode === 'group' ? 'bg-white shadow text-blue-700' : 'text-slate-500 hover:text-slate-700'
+                }`}
+            >
+              Planificado (Recomendado)
+            </button>
+            <button
+              type="button"
+              onClick={() => setAssignMode('manual')}
+              className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${assignMode === 'manual' ? 'bg-white shadow text-blue-700' : 'text-slate-500 hover:text-slate-700'
+                }`}
+            >
+              Manual / Ad-hoc
+            </button>
           </div>
 
           <form onSubmit={handleSave} className="space-y-4">
-            
+
             {/* GROUP SELECTION (If in Group Mode) */}
             {assignMode === 'group' && (
               <div className="bg-blue-50 border border-blue-100 p-3 rounded-lg mb-2">
@@ -1907,12 +1878,12 @@ const ScheduleView = () => {
                 >
                   <option value="">-- Selecciona un paralelo pendiente --</option>
                   {pendingGroups.map(g => {
-                     const sub = state.subjects.find(s => s.id === g.subjectId);
-                     return (
-                       <option key={g.id} value={g.id}>
-                         {sub?.name} - {g.name} (Faltan {g.remaining}h)
-                       </option>
-                     )
+                    const sub = state.subjects.find(s => s.id === g.subjectId);
+                    return (
+                      <option key={g.id} value={g.id}>
+                        {sub?.name} - {g.name} (Faltan {g.remaining}h)
+                      </option>
+                    )
                   })}
                   {pendingGroups.length === 0 && <option disabled>No hay grupos pendientes</option>}
                 </select>
@@ -1924,22 +1895,70 @@ const ScheduleView = () => {
               </div>
             )}
 
+            {/* VALIDATION WARNINGS */}
+            {formSubjectId && (formTeacherId || selectedTeacherId) && (
+              <div className="space-y-2">
+                {(() => {
+                  const teacherId = viewMode === 'teachers' ? selectedTeacherId : formTeacherId;
+                  const teacher = state.teachers.find(t => t.id === teacherId);
+                  const subject = state.subjects.find(s => s.id === formSubjectId);
+
+                  const warnings = [];
+
+                  // 1. Specialty Check
+                  if (teacher && subject && teacher.allowedSubjectIds && teacher.allowedSubjectIds.length > 0) {
+                    if (!teacher.allowedSubjectIds.includes(subject.id)) {
+                      warnings.push({
+                        type: 'specialty',
+                        message: `El docente no tiene esta materia como especialidad.`
+                      });
+                    }
+                  }
+
+                  // 2. Preferred Day Check
+                  if (subject && subject.preferredDays && subject.preferredDays.length > 0 && selectedCell) {
+                    if (!subject.preferredDays.includes(selectedCell.day)) {
+                      warnings.push({
+                        type: 'day',
+                        message: `Este no es un día preferido para esta materia.`
+                      });
+                    }
+                  }
+
+                  if (warnings.length === 0) return null;
+
+                  return (
+                    <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg space-y-2 animate-in fade-in slide-in-from-top-1">
+                      <div className="flex items-center gap-2 text-amber-800 font-bold text-xs uppercase tracking-wider">
+                        <AlertTriangle size={14} /> Advertencias de Reglas
+                      </div>
+                      {warnings.map((w, idx) => (
+                        <div key={idx} className="text-xs text-amber-700 flex items-start gap-2">
+                          <div className="mt-1 w-1 h-1 rounded-full bg-amber-400 shrink-0" />
+                          {w.message}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
             {/* Subject Select (Disabled if group mode selected) */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Materia</label>
-              <select 
-                  className={`w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-slate-900 ${
-                    assignMode === 'group' ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : ''
+              <select
+                className={`w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-slate-900 ${assignMode === 'group' ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : ''
                   }`}
-                  value={formSubjectId}
-                  onChange={e => setFormSubjectId(e.target.value)}
-                  required
-                  disabled={assignMode === 'group'}
+                value={formSubjectId}
+                onChange={e => setFormSubjectId(e.target.value)}
+                required
+                disabled={assignMode === 'group'}
               >
-                  <option value="">Selecciona una materia...</option>
-                  {state.subjects.map(s => (
-                    <option key={s.id} value={s.id}>{s.name} ({s.area})</option>
-                  ))}
+                <option value="">Selecciona una materia...</option>
+                {state.subjects.map(s => (
+                  <option key={s.id} value={s.id}>{s.name} ({s.area})</option>
+                ))}
               </select>
             </div>
 
@@ -1947,42 +1966,42 @@ const ScheduleView = () => {
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Docente</label>
               {viewMode === 'teachers' && selectedTeacherId ? (
-                  // Locked Input (Context Aware)
-                  <div className="w-full px-3 py-2 border border-slate-200 bg-slate-50 rounded-lg text-slate-500 flex items-center justify-between">
-                    <span>{state.teachers.find(t => t.id === selectedTeacherId)?.name}</span>
-                    <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Fijo</span>
-                  </div>
+                // Locked Input (Context Aware)
+                <div className="w-full px-3 py-2 border border-slate-200 bg-slate-50 rounded-lg text-slate-500 flex items-center justify-between">
+                  <span>{state.teachers.find(t => t.id === selectedTeacherId)?.name}</span>
+                  <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Fijo</span>
+                </div>
               ) : (
-                <select 
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-slate-900"
-                    value={formTeacherId}
-                    onChange={e => setFormTeacherId(e.target.value)}
-                    required
+                <select
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-slate-900"
+                  value={formTeacherId}
+                  onChange={e => setFormTeacherId(e.target.value)}
+                  required
                 >
-                    <option value="">Selecciona un docente...</option>
-                    {state.teachers.map(t => {
-                      if (!selectedCell) return null;
-                      
-                      const unavailableKey = `${selectedCell.day}-${selectedCell.slot.id}`;
-                      const isBlocked = t.unavailableSlots?.includes(unavailableKey);
-                      
-                      const isBusy = state.assignments.some(a => 
-                          a.teacherId === t.id && 
-                          a.day === selectedCell.day && 
-                          a.timeSlotId === selectedCell.slot.id
-                      );
-                      
-                      const isDisabled = isBlocked || isBusy;
-                      let statusLabel = "";
-                      if (isBlocked) statusLabel = "(No disponible)";
-                      if (isBusy) statusLabel = "(Ya tiene clase)";
+                  <option value="">Selecciona un docente...</option>
+                  {state.teachers.map(t => {
+                    if (!selectedCell) return null;
 
-                      return (
-                        <option key={t.id} value={t.id} disabled={isDisabled} className={isDisabled ? 'text-slate-400' : ''}>
-                          {t.name} {statusLabel}
-                        </option>
-                      );
-                    })}
+                    const unavailableKey = `${selectedCell.day}-${selectedCell.slot.id}`;
+                    const isBlocked = t.unavailableSlots?.includes(unavailableKey);
+
+                    const isBusy = state.assignments.some(a =>
+                      a.teacherId === t.id &&
+                      a.day === selectedCell.day &&
+                      a.timeSlotId === selectedCell.slot.id
+                    );
+
+                    const isDisabled = isBlocked || isBusy;
+                    let statusLabel = "";
+                    if (isBlocked) statusLabel = "(No disponible)";
+                    if (isBusy) statusLabel = "(Ya tiene clase)";
+
+                    return (
+                      <option key={t.id} value={t.id} disabled={isDisabled} className={isDisabled ? 'text-slate-400' : ''}>
+                        {t.name} {statusLabel}
+                      </option>
+                    );
+                  })}
                 </select>
               )}
             </div>
@@ -1991,49 +2010,49 @@ const ScheduleView = () => {
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Aula</label>
               {viewMode === 'classrooms' && selectedClassroomId ? (
-                  // Locked Input (Context Aware)
-                  <div className="w-full px-3 py-2 border border-slate-200 bg-slate-50 rounded-lg text-slate-500 flex items-center justify-between">
-                    <span>{state.classrooms.find(c => c.id === selectedClassroomId)?.name}</span>
-                    <span className="text-xs font-bold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded">Fijo</span>
-                  </div>
+                // Locked Input (Context Aware)
+                <div className="w-full px-3 py-2 border border-slate-200 bg-slate-50 rounded-lg text-slate-500 flex items-center justify-between">
+                  <span>{state.classrooms.find(c => c.id === selectedClassroomId)?.name}</span>
+                  <span className="text-xs font-bold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded">Fijo</span>
+                </div>
               ) : (
-                <select 
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-slate-900"
-                    value={formClassroomId}
-                    onChange={e => setFormClassroomId(e.target.value)}
-                    required
+                <select
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-slate-900"
+                  value={formClassroomId}
+                  onChange={e => setFormClassroomId(e.target.value)}
+                  required
                 >
-                    <option value="">Selecciona un aula...</option>
-                    {state.classrooms.map(c => {
-                      if (!selectedCell) return null;
+                  <option value="">Selecciona un aula...</option>
+                  {state.classrooms.map(c => {
+                    if (!selectedCell) return null;
 
-                      const isOccupied = state.assignments.some(a => 
-                          a.classroomId === c.id && 
-                          a.day === selectedCell.day && 
-                          a.timeSlotId === selectedCell.slot.id
-                      );
+                    const isOccupied = state.assignments.some(a =>
+                      a.classroomId === c.id &&
+                      a.day === selectedCell.day &&
+                      a.timeSlotId === selectedCell.slot.id
+                    );
 
-                      return (
-                        <option key={c.id} value={c.id} disabled={isOccupied} className={isOccupied ? 'text-slate-400' : ''}>
-                          {c.name} ({c.type}) {isOccupied ? '- Ocupada' : ''}
-                        </option>
-                      );
-                    })}
+                    return (
+                      <option key={c.id} value={c.id} disabled={isOccupied} className={isOccupied ? 'text-slate-400' : ''}>
+                        {c.name} ({c.type}) {isOccupied ? '- Ocupada' : ''}
+                      </option>
+                    );
+                  })}
                 </select>
               )}
             </div>
 
             {/* Footer Buttons */}
             <div className="pt-4 flex space-x-3">
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={closeModal}
                 className="flex-1 px-4 py-2 text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors font-medium"
               >
                 Cancelar
               </button>
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 className="flex-1 px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors font-medium shadow-sm"
               >
                 Asignar
@@ -2051,11 +2070,10 @@ const ScheduleView = () => {
 const SidebarItem = ({ icon: Icon, label, active, onClick }: any) => (
   <button
     onClick={onClick}
-    className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors duration-200 ${
-      active 
-        ? 'bg-blue-50 text-blue-600 font-medium' 
-        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-    }`}
+    className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors duration-200 ${active
+      ? 'bg-blue-50 text-blue-600 font-medium'
+      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+      }`}
   >
     <Icon size={20} />
     <span>{label}</span>
@@ -2083,7 +2101,7 @@ const DashboardView = () => {
   const totalTeachers = state.teachers.length;
   const totalStudents = state.subjects.reduce((acc, s) => acc + s.projectedStudents, 0);
   const totalClassrooms = state.classrooms.length;
-  
+
   // Calculate slots info
   const firstSlot = timeSlots[0]?.start;
   const lastSlot = timeSlots[timeSlots.length - 1]?.end;
@@ -2098,32 +2116,32 @@ const DashboardView = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard 
-          title="Docentes Activos" 
-          value={totalTeachers} 
-          icon={Users} 
+        <StatCard
+          title="Docentes Activos"
+          value={totalTeachers}
+          icon={Users}
           color="bg-blue-500"
           subtext="2 con carga completa"
         />
-        <StatCard 
-          title="Materias Ofertadas" 
-          value={state.subjects.length} 
-          icon={BookOpen} 
-          color="bg-emerald-500" 
+        <StatCard
+          title="Materias Ofertadas"
+          value={state.subjects.length}
+          icon={BookOpen}
+          color="bg-emerald-500"
           subtext={`${totalStudents} estudiantes proyectados`}
         />
-        <StatCard 
-          title="Aulas Disponibles" 
-          value={totalClassrooms} 
-          icon={School} 
-          color="bg-indigo-500" 
+        <StatCard
+          title="Aulas Disponibles"
+          value={totalClassrooms}
+          icon={School}
+          color="bg-indigo-500"
           subtext="Capacidad total: 120"
         />
-        <StatCard 
-          title="Bloques Horarios" 
-          value={timeSlots.length} 
-          icon={CalendarDays} 
-          color="bg-amber-500" 
+        <StatCard
+          title="Bloques Horarios"
+          value={timeSlots.length}
+          icon={CalendarDays}
+          color="bg-amber-500"
           subtext={`De ${firstSlot} a ${lastSlot}`}
         />
       </div>
@@ -2139,7 +2157,7 @@ const DashboardView = () => {
             <div className="w-full bg-slate-100 rounded-full h-2.5">
               <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: '0%' }}></div>
             </div>
-            
+
             <div className="flex justify-between text-sm text-slate-600">
               <span>Aulas Ocupadas</span>
               <span>0%</span>
@@ -2153,20 +2171,20 @@ const DashboardView = () => {
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
           <h3 className="font-semibold text-slate-800 mb-4">Acciones Rápidas</h3>
           <div className="space-y-3">
-             <button className="w-full flex items-center justify-between p-3 border border-slate-200 rounded-lg hover:bg-slate-50 transition">
-                <span className="flex items-center space-x-2 text-slate-700">
-                  <Users size={18} />
-                  <span>Registrar nuevo docente</span>
-                </span>
-                <Plus size={16} className="text-slate-400" />
-             </button>
-             <button className="w-full flex items-center justify-between p-3 border border-slate-200 rounded-lg hover:bg-slate-50 transition">
-                <span className="flex items-center space-x-2 text-slate-700">
-                  <BookOpen size={18} />
-                  <span>Crear nueva materia</span>
-                </span>
-                <Plus size={16} className="text-slate-400" />
-             </button>
+            <button className="w-full flex items-center justify-between p-3 border border-slate-200 rounded-lg hover:bg-slate-50 transition">
+              <span className="flex items-center space-x-2 text-slate-700">
+                <Users size={18} />
+                <span>Registrar nuevo docente</span>
+              </span>
+              <Plus size={16} className="text-slate-400" />
+            </button>
+            <button className="w-full flex items-center justify-between p-3 border border-slate-200 rounded-lg hover:bg-slate-50 transition">
+              <span className="flex items-center space-x-2 text-slate-700">
+                <BookOpen size={18} />
+                <span>Crear nueva materia</span>
+              </span>
+              <Plus size={16} className="text-slate-400" />
+            </button>
           </div>
         </div>
       </div>
@@ -2184,7 +2202,7 @@ const AppContent = () => {
     <div className="min-h-screen bg-slate-50 flex font-sans">
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
           onClick={() => setIsSidebarOpen(false)}
         />
@@ -2201,8 +2219,8 @@ const AppContent = () => {
               <CalendarDays className="text-blue-600" />
               <span>UniScheduler</span>
             </h1>
-            <button 
-              onClick={() => setIsSidebarOpen(false)} 
+            <button
+              onClick={() => setIsSidebarOpen(false)}
               className="lg:hidden text-slate-400 hover:text-slate-600"
             >
               <X size={24} />
@@ -2213,45 +2231,45 @@ const AppContent = () => {
             <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 px-4 mt-2">
               Principal
             </div>
-            <SidebarItem 
-              icon={LayoutDashboard} 
-              label="Dashboard" 
-              active={activeTab === 'dashboard'} 
-              onClick={() => setActiveTab('dashboard')} 
+            <SidebarItem
+              icon={LayoutDashboard}
+              label="Dashboard"
+              active={activeTab === 'dashboard'}
+              onClick={() => setActiveTab('dashboard')}
             />
-            <SidebarItem 
-              icon={ListTodo} 
-              label="Oferta Académica" 
-              active={activeTab === 'offer_planning'} 
-              onClick={() => setActiveTab('offer_planning')} 
+            <SidebarItem
+              icon={ListTodo}
+              label="Oferta Académica"
+              active={activeTab === 'offer_planning'}
+              onClick={() => setActiveTab('offer_planning')}
             />
-            <SidebarItem 
-              icon={CalendarDays} 
-              label="Planificador" 
-              active={activeTab === 'schedule'} 
-              onClick={() => setActiveTab('schedule')} 
+            <SidebarItem
+              icon={CalendarDays}
+              label="Planificador"
+              active={activeTab === 'schedule'}
+              onClick={() => setActiveTab('schedule')}
             />
 
             <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 px-4 mt-6">
               Gestión
             </div>
-            <SidebarItem 
-              icon={Users} 
-              label="Docentes" 
-              active={activeTab === 'teachers'} 
-              onClick={() => setActiveTab('teachers')} 
+            <SidebarItem
+              icon={Users}
+              label="Docentes"
+              active={activeTab === 'teachers'}
+              onClick={() => setActiveTab('teachers')}
             />
-            <SidebarItem 
-              icon={BookOpen} 
-              label="Materias" 
-              active={activeTab === 'subjects'} 
-              onClick={() => setActiveTab('subjects')} 
+            <SidebarItem
+              icon={BookOpen}
+              label="Materias"
+              active={activeTab === 'subjects'}
+              onClick={() => setActiveTab('subjects')}
             />
-            <SidebarItem 
-              icon={School} 
-              label="Aulas" 
-              active={activeTab === 'classrooms'} 
-              onClick={() => setActiveTab('classrooms')} 
+            <SidebarItem
+              icon={School}
+              label="Aulas"
+              active={activeTab === 'classrooms'}
+              onClick={() => setActiveTab('classrooms')}
             />
           </nav>
 
@@ -2273,7 +2291,7 @@ const AppContent = () => {
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Header (Mobile) */}
         <header className="bg-white border-b border-slate-200 lg:hidden p-4 flex items-center justify-between">
-          <button 
+          <button
             onClick={() => setIsSidebarOpen(true)}
             className="text-slate-500 hover:text-slate-700"
           >

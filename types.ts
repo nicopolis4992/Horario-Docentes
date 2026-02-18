@@ -14,6 +14,7 @@ export interface Teacher {
   email?: string;
   color: string; // Hex color for calendar visualization
   unavailableSlots: string[]; // Array of strings formatted as "Day-TimeSlotId" (e.g., "Lunes-slot-0") representing blocked times
+  allowedSubjectIds?: string[]; // Teacher specialties (ids of Subjects they can teach)
 }
 
 export type ClassroomType = 'Aula' | 'Lab PC' | 'Lab Mac';
@@ -34,6 +35,8 @@ export interface Subject {
   credits: number; // Hours per week implies blocks
   projectedStudents: number;
   area: SubjectArea; // New field for the degree axis
+  preferredDays?: DayOfWeek[]; // Restricted days for this subject (e.g., Mon/Wed/Fri)
+  requiredClassroomType?: ClassroomType; // Mapping for automated generation
 }
 
 // Represents a concrete instance of a Subject (A "Parallel" or "Group")
@@ -45,10 +48,13 @@ export interface CourseGroup {
   teacherId?: string; // Assigned teacher
   studentCount: number; // Number of students in this specific group
   totalHours: number; // Derived from Subject.credits
-  
+
   // The preferred or planned room. 
   // IMPORTANT: The schedule can override this, but this is used for planning capacity.
-  plannedClassroomId?: string; 
+  plannedClassroomId?: string;
+
+  // Defines how the totalHours are split (e.g., [2, 1] for 3 hours)
+  sessionPattern?: number[];
 }
 
 // The actual event on the calendar
