@@ -23,6 +23,7 @@ type Action =
   | { type: 'BULK_ADD_COURSE_GROUPS'; payload: CourseGroup[] } // Helper for the wizard
   // Assignments
   | { type: 'ADD_ASSIGNMENT'; payload: ScheduleAssignment }
+  | { type: 'UPDATE_ASSIGNMENT'; payload: ScheduleAssignment }
   | { type: 'DELETE_ASSIGNMENT'; payload: string } // id
   // System
   | { type: 'RESET_DATA' };
@@ -95,7 +96,7 @@ const appReducer = (state: AppState, action: Action): AppState => {
     case 'ADD_COURSE_GROUP':
       return { ...state, courseGroups: [...state.courseGroups, action.payload] };
     case 'UPDATE_COURSE_GROUP':
-       return {
+      return {
         ...state,
         courseGroups: state.courseGroups.map((g) =>
           g.id === action.payload.id ? action.payload : g
@@ -116,6 +117,13 @@ const appReducer = (state: AppState, action: Action): AppState => {
     // --- Assignments ---
     case 'ADD_ASSIGNMENT':
       return { ...state, assignments: [...state.assignments, action.payload] };
+    case 'UPDATE_ASSIGNMENT':
+      return {
+        ...state,
+        assignments: state.assignments.map((a) =>
+          a.id === action.payload.id ? action.payload : a
+        ),
+      };
     case 'DELETE_ASSIGNMENT':
       return {
         ...state,
@@ -125,10 +133,10 @@ const appReducer = (state: AppState, action: Action): AppState => {
     // --- System ---
     case 'RESET_DATA':
       return {
-         ...MOCK_INITIAL_DATA,
-         courseGroups: [] // Mock data doesn't currently have groups, initialize empty
-      } as AppState; 
-      
+        ...MOCK_INITIAL_DATA,
+        courseGroups: [] // Mock data doesn't currently have groups, initialize empty
+      } as AppState;
+
     default:
       return state;
   }

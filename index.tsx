@@ -39,7 +39,8 @@ import {
   Calculator,
   ArrowRight,
   Link,
-  Layers
+  Layers,
+  Scissors,
 } from 'lucide-react';
 import { generateTimeSlots, AREA_CONFIG, CLASSROOM_CONFIG } from './utils';
 
@@ -88,10 +89,44 @@ const OfferPlannerView = () => {
     [state.courseGroups, selectedSubjectId]
   );
 
-  const handleCalculate = () => {
-    if (!selectedSubject || !baseClassroomId) return;
+  // Helper for Auto-Assignment
+  const suggestTeacherAndRoom = (subject: Subject) => {
+    // 1. Suggest Teacher
+    let suggestedTeacherId = subject.preferredTeacherId;
+    if (!suggestedTeacherId) {
+      const eligibleTeachers = state.teachers.filter(t =>
+        t.allowedSubjectIds?.includes(subject.id)
+      ).sort((a, b) => getTeacherTotalLoad(a.id) - getTeacherTotalLoad(b.id));
 
-    const classroom = state.classrooms.find(c => c.id === baseClassroomId);
+      suggestedTeacherId = eligibleTeachers[0]?.id;
+    }
+
+    // 2. Suggest Room
+    let suggestedRoomId = '';
+
+    // Priority 1: Specific Rooms
+    if (subject.allowedClassroomIds && subject.allowedClassroomIds.length > 0) {
+      suggestedRoomId = subject.allowedClassroomIds[0];
+    }
+    // Priority 2: Room Types
+    else if (subject.allowedClassroomTypes && subject.allowedClassroomTypes.length > 0) {
+      const matchingRooms = state.classrooms.filter(c =>
+        subject.allowedClassroomTypes?.includes(c.type)
+      );
+      suggestedRoomId = matchingRooms[0]?.id || '';
+    }
+
+    return { suggestedTeacherId, suggestedRoomId };
+  };
+
+  const handleCalculate = () => {
+    if (!selectedSubject) return;
+
+    // Use preference or UI baseClassroomId or fallback
+    const { suggestedRoomId, suggestedTeacherId } = suggestTeacherAndRoom(selectedSubject);
+    const finalRoomId = baseClassroomId || suggestedRoomId || state.classrooms[0]?.id;
+
+    const classroom = state.classrooms.find(c => c.id === finalRoomId);
     if (!classroom) return;
 
     const capacity = useMaxCapacity ? classroom.maxCapacity : classroom.recommendedCapacity;
@@ -103,17 +138,18 @@ const OfferPlannerView = () => {
     let studentsRemaining = totalStudents;
 
     for (let i = 0; i < numberOfGroups; i++) {
-      // Logic: Fill capacity until last group
       const count = Math.min(capacity, studentsRemaining);
       studentsRemaining -= count;
 
       newGroups.push({
-        id: crypto.randomUUID(), // Temp ID
+        id: crypto.randomUUID(),
         subjectId: selectedSubject.id,
-        name: `Paralelo ${String.fromCharCode(65 + i)}`, // A, B, C...
+        name: `Paralelo ${String.fromCharCode(65 + i)}`,
         studentCount: count,
         totalHours: selectedSubject.credits,
-        plannedClassroomId: classroom.id // Default to base classroom
+        plannedClassroomId: classroom.id,
+        teacherId: suggestedTeacherId,
+        sessionPattern: selectedSubject.sessionPattern
       });
     }
     setPreviewGroups(newGroups);
@@ -160,6 +196,54 @@ const OfferPlannerView = () => {
     });
   };
 
+  const handleBulkGenerate = () => {
+    const subjectsToPlan = state.subjects.filter(s => {
+      const existing = state.courseGroups.filter(g => g.subjectId === s.id);
+      const totalPlanned = existing.reduce((acc, g) => acc + g.studentCount, 0);
+      return totalPlanned < s.projectedStudents;
+    });
+
+    if (subjectsToPlan.length === 0) return;
+
+    const allNewGroups: CourseGroup[] = [];
+
+    subjectsToPlan.forEach(subject => {
+      const { suggestedRoomId, suggestedTeacherId } = suggestTeacherAndRoom(subject);
+      const roomId = suggestedRoomId || state.classrooms[0]?.id;
+      const classroom = state.classrooms.find(c => c.id === roomId);
+      if (!classroom) return;
+
+      const capacity = classroom.recommendedCapacity;
+      const totalStudents = subject.projectedStudents;
+      const numberOfGroups = Math.ceil(totalStudents / capacity);
+
+      let studentsRemaining = totalStudents;
+
+      for (let i = 0; i < numberOfGroups; i++) {
+        const count = Math.min(capacity, studentsRemaining);
+        studentsRemaining -= count;
+
+        allNewGroups.push({
+          id: crypto.randomUUID(),
+          subjectId: subject.id,
+          name: `Paralelo ${String.fromCharCode(65 + i)}`,
+          studentCount: count,
+          totalHours: subject.credits,
+          plannedClassroomId: classroom.id,
+          teacherId: suggestedTeacherId,
+          sessionPattern: subject.sessionPattern
+        });
+      }
+    });
+
+    if (allNewGroups.length > 0) {
+      dispatch({
+        type: 'BULK_ADD_COURSE_GROUPS',
+        payload: allNewGroups
+      });
+    }
+  };
+
   // Improved Load Calculation Helper
   const getTeacherTotalLoad = (teacherId: string, excludeGroupId?: string) => {
     // 1. Planned Groups Load: Sum totalHours of all groups assigned to teacher (except the one being edited)
@@ -180,9 +264,19 @@ const OfferPlannerView = () => {
     <div className="flex flex-col lg:flex-row h-auto lg:h-[calc(100vh-100px)] gap-6 pb-20 lg:pb-0">
       {/* LEFT: Subjects List */}
       <div className="w-full lg:w-1/3 bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col overflow-hidden shrink-0 max-h-[300px] lg:max-h-none">
-        <div className="p-4 border-b border-slate-100 bg-slate-50 sticky top-0 z-10">
-          <h3 className="font-bold text-slate-800">Materias Ofertadas</h3>
-          <p className="text-xs text-slate-500">Selecciona una materia para planificar sus paralelos.</p>
+        <div className="p-4 border-b border-slate-100 bg-slate-50 sticky top-0 z-10 flex justify-between items-center">
+          <div>
+            <h3 className="font-bold text-slate-800">Materias Ofertadas</h3>
+            <p className="text-xs text-slate-500">Planifica los paralelos aquí.</p>
+          </div>
+          <button
+            onClick={handleBulkGenerate}
+            className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-[10px] font-bold transition-colors shadow-sm"
+            title="Generar paralelos para todas las materias pendientes"
+          >
+            <Sparkles size={12} />
+            Generar Todo
+          </button>
         </div>
         <div className="overflow-y-auto flex-1 p-2 space-y-2">
           {state.subjects.map(subject => {
@@ -197,6 +291,12 @@ const OfferPlannerView = () => {
                 onClick={() => {
                   setSelectedSubjectId(subject.id);
                   setPreviewGroups([]); // Reset preview when changing subject
+                  // AUTO-POPULATE BASE CLASSROOM FROM PREFERENCE
+                  if (subject.preferredClassroomId) {
+                    setBaseClassroomId(subject.preferredClassroomId);
+                  } else {
+                    setBaseClassroomId('');
+                  }
                 }}
                 className={`w-full text-left p-3 rounded-lg border transition-all ${selectedSubjectId === subject.id
                   ? 'bg-blue-50 border-blue-400 shadow-sm ring-1 ring-blue-400'
@@ -422,14 +522,17 @@ const OfferPlannerView = () => {
                             >
                               <option value="">-- Sin Asignar --</option>
                               {state.teachers.map(t => {
-                                // Calculate projected load if we select THIS teacher
-                                const tBaseLoad = getTeacherTotalLoad(t.id, group.id); // Exclude current group from base
+                                // Calculate projected load if we select THIS teacher (for warning logic)
+                                const tBaseLoad = getTeacherTotalLoad(t.id, group.id);
                                 const tProjected = tBaseLoad + group.totalHours;
                                 const willBeOverloaded = tProjected > t.maxHours;
 
+                                // Current Total Load (what the user actually sees)
+                                const currentLoad = getTeacherTotalLoad(t.id);
+
                                 return (
                                   <option key={t.id} value={t.id} className={willBeOverloaded ? 'text-red-500' : ''}>
-                                    {t.name} (Total: {tProjected}/{t.maxHours}h) {willBeOverloaded ? '⚠️' : ''}
+                                    {t.name} (Total: {currentLoad}/{t.maxHours}h) {willBeOverloaded ? '⚠️' : ''}
                                   </option>
                                 );
                               })}
@@ -899,7 +1002,8 @@ const SubjectsView = () => {
       setEditingSubject(subject);
       setFormData({
         ...subject,
-        preferredDays: subject.preferredDays || []
+        preferredDays: subject.preferredDays || [],
+        sessionPatternString: subject.sessionPattern ? subject.sessionPattern.join(', ') : subject.credits.toString()
       });
       setIsCustomCreditsMode(![1, 2, 3].includes(subject.credits));
     } else {
@@ -909,20 +1013,32 @@ const SubjectsView = () => {
         credits: 2,
         projectedStudents: 30,
         area: 'Audiovisual',
-        preferredDays: []
+        preferredDays: [],
+        sessionPatternString: '2'
       });
       setIsCustomCreditsMode(false);
     }
     setIsModalOpen(true);
   };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name) return;
 
+    const sessionPattern = formData.sessionPatternString
+      ? formData.sessionPatternString.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n))
+      : [formData.credits];
+
+    const patternSum = sessionPattern.reduce((acc, n) => acc + n, 0);
+    if (patternSum !== formData.credits) {
+      alert(`La suma del patrón de sesiones (${patternSum}h) debe coincidir con el total de horas (${formData.credits}h).`);
+      return;
+    }
+
+    const { sessionPatternString, ...rest } = formData;
     const payload = {
       ...(editingSubject || { id: crypto.randomUUID() }),
-      ...formData
+      ...rest,
+      sessionPattern
     } as Subject;
 
     if (editingSubject) {
@@ -1085,6 +1201,86 @@ const SubjectsView = () => {
             </div>
           </div>
 
+          <div className="space-y-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
+            <h4 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+              <School size={16} className="text-slate-400" /> Preferencias de Aulas
+            </h4>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Tipos de Aula Permitidos</label>
+              <div className="flex flex-wrap gap-2">
+                {(Object.keys(CLASSROOM_CONFIG) as ClassroomType[]).map(type => {
+                  const isSelected = formData.allowedClassroomTypes?.includes(type);
+                  const config = CLASSROOM_CONFIG[type];
+                  return (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => {
+                        const current = formData.allowedClassroomTypes || [];
+                        const next = isSelected
+                          ? current.filter(t => t !== type)
+                          : [...current, type];
+                        setFormData({ ...formData, allowedClassroomTypes: next });
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all flex items-center gap-1.5 ${isSelected
+                        ? `${config.bg} ${config.border} ${config.color}`
+                        : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                        }`}
+                    >
+                      {isSelected && <Check size={12} />}
+                      {type}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Aulas Específicas (Opcional)</label>
+              <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-1">
+                {state.classrooms.map(c => {
+                  const isSelected = formData.allowedClassroomIds?.includes(c.id);
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => {
+                        const current = formData.allowedClassroomIds || [];
+                        const next = isSelected
+                          ? current.filter(id => id !== c.id)
+                          : [...current, c.id];
+                        setFormData({ ...formData, allowedClassroomIds: next });
+                      }}
+                      className={`px-2 py-1 rounded text-[10px] font-bold border transition-all ${isSelected
+                        ? 'bg-blue-50 border-blue-400 text-blue-700'
+                        : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                        }`}
+                    >
+                      {c.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Docente Preferido (Opcional)</label>
+              <select
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none bg-white text-slate-900"
+                value={formData.preferredTeacherId || ''}
+                onChange={e => setFormData({ ...formData, preferredTeacherId: e.target.value })}
+              >
+                <option value="">-- Sin asignar --</option>
+                {state.teachers.map(t => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">Días Preferidos (Opcional)</label>
             <div className="flex flex-wrap gap-2">
@@ -1163,6 +1359,18 @@ const SubjectsView = () => {
                 </div>
               </div>
             )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Patrón de Sesiones (Opcional)</label>
+            <input
+              type="text"
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all text-slate-900 bg-white"
+              value={formData.sessionPatternString || ''}
+              onChange={e => setFormData({ ...formData, sessionPatternString: e.target.value })}
+              placeholder="Ej: 2, 1 para una materia de 3h"
+            />
+            <p className="text-[10px] text-slate-400 mt-1">Define cómo se dividen las horas. Ej: "2, 1" crea un bloque de 2h y uno de 1h.</p>
           </div>
 
           <div>
@@ -1454,20 +1662,58 @@ const ScheduleView = () => {
   const [formClassroomId, setFormClassroomId] = useState('');
 
   // Course Group Status Logic
-  const groupStatus = useMemo(() => {
-    return state.courseGroups.map(group => {
-      // Logic assumes 1 hour = 1 slot (simplification for MVP)
-      const assignedCount = state.assignments.filter(a => a.courseGroupId === group.id).length;
-      return {
-        ...group,
-        assignedCount,
-        remaining: group.totalHours - assignedCount,
-        isComplete: assignedCount >= group.totalHours
-      };
-    });
-  }, [state.courseGroups, state.assignments]);
+  const pendingSessions = useMemo(() => {
+    const sessions: { id: string; groupId: string; subjectId: string; groupName: string; hours: number; sessionIndex: number }[] = [];
 
-  const pendingGroups = useMemo(() => groupStatus.filter(g => !g.isComplete), [groupStatus]);
+    state.courseGroups.forEach(group => {
+      const pattern = group.sessionPattern || [group.totalHours];
+      const groupAssignments = state.assignments.filter(a => a.courseGroupId === group.id);
+
+      // Calculate how many hours are already assigned
+      let assignedRemaining = groupAssignments.length;
+
+      pattern.forEach((hours, idx) => {
+        if (assignedRemaining >= hours) {
+          // This session is fully assigned
+          assignedRemaining -= hours;
+        } else if (assignedRemaining > 0) {
+          // This session is partially assigned (shouldn't happen with strict patterns, but let's be robust)
+          const remainingInSession = hours - assignedRemaining;
+          sessions.push({
+            id: `${group.id}-s${idx}`,
+            groupId: group.id,
+            subjectId: group.subjectId,
+            groupName: group.name,
+            hours: remainingInSession,
+            sessionIndex: idx
+          });
+          assignedRemaining = 0;
+        } else {
+          // This session is completely pending
+          sessions.push({
+            id: `${group.id}-s${idx}`,
+            groupId: group.id,
+            subjectId: group.subjectId,
+            groupName: group.name,
+            hours: hours,
+            sessionIndex: idx
+          });
+        }
+      });
+    });
+
+    let filtered = sessions;
+
+    // IF IN TEACHER VIEW, FILTER BY SPECIALTY
+    if (viewMode === 'teachers' && selectedTeacherId) {
+      const teacher = state.teachers.find(t => t.id === selectedTeacherId);
+      if (teacher) {
+        filtered = filtered.filter(s => teacher.allowedSubjectIds?.includes(s.subjectId));
+      }
+    }
+
+    return filtered;
+  }, [state.courseGroups, state.assignments, viewMode, selectedTeacherId, state.teachers]);
 
   // Handle Tab Change
   const handleTabChange = (mode: 'teachers' | 'classrooms') => {
@@ -1492,8 +1738,8 @@ const ScheduleView = () => {
     setFormSubjectId('');
     setSelectedGroupId('');
 
-    // Default to 'group' mode if there are pending groups, else 'manual'
-    setAssignMode(pendingGroups.length > 0 ? 'group' : 'manual');
+    // Default to 'group' mode if there are pending sessions, else 'manual'
+    setAssignMode(pendingSessions.length > 0 ? 'group' : 'manual');
   };
 
   const closeModal = () => {
@@ -1505,15 +1751,18 @@ const ScheduleView = () => {
   };
 
   // Handle Group Selection change
-  const handleGroupSelect = (groupId: string) => {
-    setSelectedGroupId(groupId);
-    if (!groupId) return;
+  const handleGroupSelect = (sessionId: string) => {
+    setSelectedGroupId(sessionId);
+    if (!sessionId) return;
 
-    const group = state.courseGroups.find(g => g.id === groupId);
-    if (group) {
-      setFormSubjectId(group.subjectId);
-      if (group.teacherId) setFormTeacherId(group.teacherId);
-      if (group.plannedClassroomId) setFormClassroomId(group.plannedClassroomId);
+    const session = pendingSessions.find(s => s.id === sessionId);
+    if (session) {
+      const group = state.courseGroups.find(g => g.id === session.groupId);
+      if (group) {
+        setFormSubjectId(group.subjectId);
+        if (group.teacherId) setFormTeacherId(group.teacherId);
+        if (group.plannedClassroomId) setFormClassroomId(group.plannedClassroomId);
+      }
     }
   };
 
@@ -1521,24 +1770,158 @@ const ScheduleView = () => {
     e.preventDefault();
     if (!selectedCell || !formSubjectId || !formTeacherId || !formClassroomId) return;
 
-    dispatch({
-      type: 'ADD_ASSIGNMENT',
-      payload: {
-        id: crypto.randomUUID(),
-        day: selectedCell.day,
-        timeSlotId: selectedCell.slot.id,
-        subjectId: formSubjectId,
-        teacherId: formTeacherId,
-        classroomId: formClassroomId,
-        courseGroupId: assignMode === 'group' ? selectedGroupId : undefined
+    if (assignMode === 'group' && selectedGroupId) {
+      const session = pendingSessions.find(s => s.id === selectedGroupId);
+      if (session) {
+        const hoursToAssign = session.hours;
+        const currentSlotIndex = timeSlots.findIndex(s => s.id === selectedCell.slot.id);
+
+        const newAssignments: ScheduleAssignment[] = [];
+
+        for (let i = 0; i < hoursToAssign; i++) {
+          const slot = timeSlots[currentSlotIndex + i];
+          if (!slot) break; // End of day
+
+          // Double check overlap (Teacher or Room)
+          const isOverlap = state.assignments.some(a =>
+            a.day === selectedCell.day &&
+            a.timeSlotId === slot.id &&
+            (a.teacherId === formTeacherId || a.classroomId === formClassroomId)
+          );
+
+          if (isOverlap) break; // Stop at first overlap
+
+          newAssignments.push({
+            id: crypto.randomUUID(),
+            day: selectedCell.day,
+            timeSlotId: slot.id,
+            subjectId: formSubjectId,
+            teacherId: formTeacherId,
+            classroomId: formClassroomId,
+            courseGroupId: session.groupId
+          });
+        }
+
+        newAssignments.forEach(a => dispatch({ type: 'ADD_ASSIGNMENT', payload: a }));
       }
-    });
+    } else {
+      // Manual single slot
+      dispatch({
+        type: 'ADD_ASSIGNMENT',
+        payload: {
+          id: crypto.randomUUID(),
+          day: selectedCell.day,
+          timeSlotId: selectedCell.slot.id,
+          subjectId: formSubjectId,
+          teacherId: formTeacherId,
+          classroomId: formClassroomId,
+          courseGroupId: undefined
+        }
+      });
+    }
     closeModal();
   };
 
   const handleDeleteAssignment = (assignmentId: string) => {
-    if (confirm('¿Quitar materia de este horario?')) {
+    if (confirm('¿Eliminar esta hora de clase?')) {
       dispatch({ type: 'DELETE_ASSIGNMENT', payload: assignmentId });
+    }
+  };
+
+  const handleSplitAssignment = (assignmentId: string) => {
+    const assignment = state.assignments.find(a => a.id === assignmentId);
+    if (assignment) {
+      dispatch({
+        type: 'UPDATE_ASSIGNMENT',
+        payload: { ...assignment, isSplit: true }
+      });
+    }
+  };
+
+  const handleAutoAssignAll = () => {
+    const newAssignments: ScheduleAssignment[] = [];
+
+    // 1. Get ALL pending groups (global)
+    const allPendingGroups = state.courseGroups.map(group => {
+      const assignedCount = state.assignments.filter(a => a.courseGroupId === group.id).length;
+      return {
+        ...group,
+        remaining: group.totalHours - assignedCount
+      };
+    }).filter(g => g.remaining > 0);
+
+    const occupiedSlots = new Set(state.assignments.map(a => `${a.day}-${a.timeSlotId}-${a.teacherId}`));
+    const occupiedRooms = new Set(state.assignments.map(a => `${a.day}-${a.timeSlotId}-${a.classroomId}`));
+
+    allPendingGroups.forEach(group => {
+      const subject = state.subjects.find(s => s.id === group.subjectId);
+      if (!subject) return;
+
+      const hoursToAssign = group.remaining;
+      const teacherId = group.teacherId;
+      if (!teacherId) return; // Skip groups without assigned teachers
+
+      const teacher = state.teachers.find(t => t.id === teacherId);
+      const preferredDays = subject.preferredDays && subject.preferredDays.length > 0 ? subject.preferredDays : days;
+
+      let assigned = false;
+
+      // Try each preferred day
+      for (const day of preferredDays) {
+        if (assigned) break;
+
+        // Try each time slot
+        for (let i = 0; i <= timeSlots.length - hoursToAssign; i++) {
+          if (assigned) break;
+
+          let canFit = true;
+          const potentialSlots: string[] = [];
+
+          for (let j = 0; j < hoursToAssign; j++) {
+            const slot = timeSlots[i + j];
+            const slotKey = `${day}-${slot.id}`;
+
+            // Checks:
+            // 1. Teacher busy? (Existing assignment or Teacher Blocked or ALREADY assigned in this loop)
+            const teacherBusy = occupiedSlots.has(`${slotKey}-${teacherId}`) ||
+              teacher?.unavailableSlots?.includes(slotKey);
+
+            // 2. Room busy? (If group has a room)
+            const roomBusy = group.plannedClassroomId &&
+              occupiedRooms.has(`${slotKey}-${group.plannedClassroomId}`);
+
+            if (teacherBusy || roomBusy) {
+              canFit = false;
+              break;
+            }
+            potentialSlots.push(slot.id);
+          }
+
+          if (canFit) {
+            // Assign!
+            potentialSlots.forEach(slotId => {
+              const aId = crypto.randomUUID();
+              const payload = {
+                id: aId,
+                day: day,
+                timeSlotId: slotId,
+                subjectId: group.subjectId,
+                teacherId: teacherId,
+                classroomId: group.plannedClassroomId || state.classrooms[0]?.id || '',
+                courseGroupId: group.id
+              };
+              newAssignments.push(payload);
+              occupiedSlots.add(`${day}-${slotId}-${teacherId}`);
+              if (payload.classroomId) occupiedRooms.add(`${day}-${slotId}-${payload.classroomId}`);
+            });
+            assigned = true;
+          }
+        }
+      }
+    });
+
+    if (newAssignments.length > 0) {
+      newAssignments.forEach(a => dispatch({ type: 'ADD_ASSIGNMENT', payload: a }));
     }
   };
 
@@ -1554,26 +1937,24 @@ const ScheduleView = () => {
           <p className="text-xs text-slate-500">Paralelos por agendar</p>
         </div>
         <div className="flex-1 overflow-y-auto p-2 space-y-2">
-          {pendingGroups.length === 0 ? (
+          {pendingSessions.length === 0 ? (
             <div className="text-center p-4 text-slate-400 text-xs italic">
               Todo planificado 🎉
             </div>
           ) : (
-            pendingGroups.map(group => {
-              const subject = state.subjects.find(s => s.id === group.subjectId);
-              const progress = (group.assignedCount / group.totalHours) * 100;
+            pendingSessions.map(session => {
+              const subject = state.subjects.find(s => s.id === session.subjectId);
               return (
-                <div key={group.id} className="p-3 bg-white border border-slate-100 rounded-lg shadow-sm hover:border-blue-200 transition-colors">
+                <div key={session.id} className="p-3 bg-white border border-slate-100 rounded-lg shadow-sm hover:border-blue-200 transition-colors">
                   <div className="flex justify-between items-start mb-1">
                     <span className="font-bold text-xs text-slate-700 line-clamp-1">{subject?.name}</span>
-                    <span className="text-[10px] font-mono bg-slate-100 px-1.5 rounded">{group.name}</span>
+                    <span className="text-[10px] font-mono bg-blue-50 text-blue-600 px-1.5 rounded">{session.groupName}</span>
                   </div>
-                  <div className="flex justify-between items-end text-[10px] text-slate-500 mb-1">
-                    <span>{group.remaining}h restantes</span>
-                    <span>{Math.round(progress)}%</span>
-                  </div>
-                  <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-amber-400" style={{ width: `${progress}%` }}></div>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-[10px] font-bold bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full border border-amber-100">
+                      Bloque de {session.hours}h
+                    </span>
+                    {session.hours > 1 && <Sparkles size={10} className="text-amber-400" />}
                   </div>
                 </div>
               );
@@ -1591,28 +1972,38 @@ const ScheduleView = () => {
             <p className="text-slate-500 text-sm">Organiza las clases de la semana.</p>
           </div>
 
-          {/* TABS */}
-          <div className="flex bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
+          {/* TABS & ACTIONS */}
+          <div className="flex gap-2">
             <button
-              onClick={() => handleTabChange('teachers')}
-              className={`px-4 py-2 rounded-md text-sm font-bold flex items-center gap-2 transition-all ${viewMode === 'teachers'
-                ? 'bg-blue-50 text-blue-700 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-                }`}
+              onClick={handleAutoAssignAll}
+              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-bold flex items-center gap-2 transition-all shadow-sm"
+              title="Asignar automáticamente todos los paralelos pendientes"
             >
-              <User size={18} />
-              Docentes
+              <Sparkles size={18} />
+              Asignar Todo
             </button>
-            <button
-              onClick={() => handleTabChange('classrooms')}
-              className={`px-4 py-2 rounded-md text-sm font-bold flex items-center gap-2 transition-all ${viewMode === 'classrooms'
-                ? 'bg-indigo-50 text-indigo-700 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-                }`}
-            >
-              <MapPin size={18} />
-              Aulas
-            </button>
+            <div className="flex bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
+              <button
+                onClick={() => handleTabChange('teachers')}
+                className={`px-4 py-2 rounded-md text-sm font-bold flex items-center gap-2 transition-all ${viewMode === 'teachers'
+                  ? 'bg-blue-50 text-blue-700 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                  }`}
+              >
+                <User size={18} />
+                Docentes
+              </button>
+              <button
+                onClick={() => handleTabChange('classrooms')}
+                className={`px-4 py-2 rounded-md text-sm font-bold flex items-center gap-2 transition-all ${viewMode === 'classrooms'
+                  ? 'bg-indigo-50 text-indigo-700 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                  }`}
+              >
+                <MapPin size={18} />
+                Aulas
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1705,128 +2096,144 @@ const ScheduleView = () => {
             ))}
           </div>
 
-          {/* Scrollable Body */}
+          {/* Scrollable Column-Based Body */}
           <div className="overflow-y-auto flex-1">
-            <div className="grid grid-cols-[80px_repeat(6,1fr)]">
-              {timeSlots.map((slot) => (
-                <React.Fragment key={slot.id}>
-                  {/* Time Label */}
-                  <div className="p-2 border-b border-r border-slate-100 bg-slate-50 text-[10px] font-mono text-slate-500 flex flex-col items-center justify-center text-center">
+            <div className="grid grid-cols-[80px_repeat(6,1fr)] min-h-max">
+
+              {/* TIME LABELS COLUMN */}
+              <div className="bg-slate-50 border-r border-slate-200 flex flex-col">
+                {timeSlots.map(slot => (
+                  <div key={slot.id} className="h-[100px] border-b border-slate-100 text-[10px] font-mono text-slate-500 flex flex-col items-center justify-center text-center p-2">
                     <span>{slot.start}</span>
-                    <span className="w-full h-px bg-slate-200 my-1"></span>
+                    <span className="w-8 h-px bg-slate-200 my-1"></span>
                     <span>{slot.end}</span>
                   </div>
+                ))}
+              </div>
 
-                  {/* Days Columns */}
-                  {days.map((day) => {
-                    // Filter logic based on viewMode
-                    let assignment: ScheduleAssignment | undefined;
-                    let isBlocked = false;
+              {/* DAY COLUMNS */}
+              {days.map(day => {
+                // Calculate Blocks for this day
+                let dayAssignments: ScheduleAssignment[] = [];
+                let teacherBlockedSlots: string[] = [];
 
-                    if (viewMode === 'teachers' && selectedTeacherId) {
-                      assignment = state.assignments.find(a =>
-                        a.day === day &&
-                        a.timeSlotId === slot.id &&
-                        a.teacherId === selectedTeacherId
+                if (viewMode === 'teachers' && selectedTeacherId) {
+                  dayAssignments = state.assignments.filter(a => a.day === day && a.teacherId === selectedTeacherId);
+                  teacherBlockedSlots = state.teachers.find(t => t.id === selectedTeacherId)?.unavailableSlots || [];
+                } else if (viewMode === 'classrooms' && selectedClassroomId) {
+                  dayAssignments = state.assignments.filter(a => a.day === day && a.classroomId === selectedClassroomId);
+                }
+
+                const blocks: { assignment: ScheduleAssignment; span: number; slotIndex: number; ids: string[] }[] = [];
+                const sorted = [...dayAssignments].sort((a, b) => {
+                  return timeSlots.findIndex(s => s.id === a.timeSlotId) - timeSlots.findIndex(s => s.id === b.timeSlotId);
+                });
+
+                sorted.forEach(a => {
+                  const idx = timeSlots.findIndex(s => s.id === a.timeSlotId);
+                  const lastBlock = blocks[blocks.length - 1];
+
+                  // Unify if: same group, contiguous slot, and NOT manually split
+                  if (lastBlock &&
+                    lastBlock.assignment.courseGroupId === a.courseGroupId &&
+                    lastBlock.slotIndex + lastBlock.span === idx &&
+                    !a.isSplit) {
+                    lastBlock.span++;
+                    lastBlock.ids.push(a.id);
+                  } else {
+                    blocks.push({ assignment: a, span: 1, slotIndex: idx, ids: [a.id] });
+                  }
+                });
+
+                return (
+                  <div key={day} className="relative border-r border-slate-200 last:border-r-0">
+
+                    {/* BACKGROUND SLOT SLOTS */}
+                    {timeSlots.map(slot => {
+                      const isBlocked = teacherBlockedSlots.includes(`${day}-${slot.id}`);
+                      return (
+                        <div key={slot.id} className={`h-[100px] border-b border-slate-100 p-1 relative group ${isBlocked ? 'bg-slate-100' : 'hover:bg-slate-50'}`}>
+                          {!isBlocked ? (
+                            <button
+                              onClick={() => openAssignmentModal(day, slot)}
+                              disabled={(!selectedTeacherId && viewMode === 'teachers') || (!selectedClassroomId && viewMode === 'classrooms')}
+                              className="w-full h-full rounded border-2 border-dashed border-transparent transition-all hover:border-slate-200 flex items-center justify-center text-slate-300 hover:text-blue-500 disabled:opacity-0"
+                            >
+                              <Plus size={24} />
+                            </button>
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center opacity-30 cursor-not-allowed">
+                              <Ban size={24} className="text-slate-400" />
+                            </div>
+                          )}
+                        </div>
                       );
+                    })}
 
-                      // Check blocked slots for teacher
-                      const teacher = state.teachers.find(t => t.id === selectedTeacherId);
-                      if (teacher && teacher.unavailableSlots?.includes(`${day}-${slot.id}`)) {
-                        isBlocked = true;
-                      }
-
-                    } else if (viewMode === 'classrooms' && selectedClassroomId) {
-                      assignment = state.assignments.find(a =>
-                        a.day === day &&
-                        a.timeSlotId === slot.id &&
-                        a.classroomId === selectedClassroomId
-                      );
-                    }
-
-                    // Render Assignment Card
-                    if (assignment) {
+                    {/* OVERLAID DYNAMIC BLOCKS */}
+                    {blocks.map(block => {
+                      const { assignment, span, slotIndex } = block;
                       const subject = state.subjects.find(s => s.id === assignment.subjectId);
                       const teacher = state.teachers.find(t => t.id === assignment.teacherId);
                       const room = state.classrooms.find(c => c.id === assignment.classroomId);
+                      const group = state.courseGroups.find(g => g.id === assignment.courseGroupId);
                       const areaConfig = subject ? AREA_CONFIG[subject.area] : AREA_CONFIG['Audiovisual'];
-                      const group = state.courseGroups.find(g => g.id === assignment?.courseGroupId);
 
                       return (
-                        <div key={`${day}-${slot.id}`} className="border-b border-r border-slate-100 p-1 min-h-[100px] relative group">
-                          <div className={`w-full h-full rounded p-2 ${areaConfig?.bg} ${areaConfig?.border} border flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow relative overflow-hidden`}>
+                        <div
+                          key={assignment.id}
+                          className="absolute left-0 right-0 p-1 z-10 transition-all pointer-events-none"
+                          style={{
+                            top: `${slotIndex * 100}px`,
+                            height: `${span * 100}px`
+                          }}
+                        >
+                          <div className={`w-full h-full rounded p-3 ${areaConfig?.bg} ${areaConfig?.border} border flex flex-col justify-between shadow-md group pointer-events-auto`}>
 
-                            {/* Header: Depends on View */}
-                            <div className="mb-1">
-                              <div className={`text-[10px] font-bold uppercase tracking-wider mb-0.5 ${areaConfig?.iconColor}`}>
+                            <div className="relative">
+                              <div className={`text-[10px] font-bold uppercase tracking-wider mb-1 ${areaConfig?.iconColor}`}>
                                 {viewMode === 'teachers' ? room?.name : teacher?.name}
                               </div>
-                              <div className="font-bold text-xs text-slate-800 line-clamp-2 leading-tight">
+                              <div className="font-bold text-sm text-slate-800 line-clamp-2 leading-tight">
                                 {subject?.name}
                               </div>
-                              {group && <div className="text-[10px] bg-white/50 px-1 rounded inline-block mt-0.5">{group.name}</div>}
+                              {group && <div className="text-[10px] bg-white/60 text-slate-700 px-1.5 py-0.5 rounded inline-block mt-2 font-medium">{group.name}</div>}
                             </div>
 
-                            {/* Footer: Depends on View */}
-                            <div className="mt-1">
-                              {viewMode === 'teachers' ? (
-                                // Teacher View: Show nothing extra or maybe time
-                                <div className="flex items-center gap-1 text-[10px] text-slate-500">
-                                  <Clock size={10} />
-                                  <span>1h</span>
-                                </div>
-                              ) : (
-                                // Classroom View: Show Students + Teacher Info Summary
-                                <div className="flex flex-col gap-1">
-                                  <div className="flex items-center gap-1.5">
-                                    <Users size={10} className="text-slate-400" />
-                                    <span className="text-[10px] font-medium text-slate-600">
-                                      {subject?.projectedStudents} est.
-                                    </span>
-                                  </div>
-                                </div>
-                              )}
+                            <div className="flex items-center justify-between mt-auto">
+                              <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600">
+                                <Clock size={12} className="text-slate-400" />
+                                <span>{span}h</span>
+                              </div>
+
+                              {/* ACTIONS */}
+                              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                {span > 1 && (
+                                  <button
+                                    onClick={() => handleSplitAssignment(block.ids[1])}
+                                    className="p-1.5 bg-white rounded-full shadow-sm border border-amber-100 text-amber-600 hover:bg-amber-50 transition-colors"
+                                    title="Dividir en bloques de 1h"
+                                  >
+                                    <Scissors size={14} />
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => handleDeleteAssignment(assignment.id)}
+                                  className="p-1.5 bg-white rounded-full shadow-sm border border-red-100 text-red-600 hover:bg-red-50 transition-colors"
+                                  title="Eliminar este bloque"
+                                >
+                                  <X size={14} />
+                                </button>
+                              </div>
                             </div>
 
-                            {/* Hover Actions */}
-                            <button
-                              onClick={() => handleDeleteAssignment(assignment!.id)}
-                              className="absolute top-1 right-1 p-1 bg-white rounded-full shadow border border-red-100 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50 z-20"
-                              title="Eliminar asignación"
-                            >
-                              <X size={12} />
-                            </button>
                           </div>
                         </div>
                       );
-                    }
-
-                    // Render Empty Cell
-                    return (
-                      <div
-                        key={`${day}-${slot.id}`}
-                        className={`border-b border-r border-slate-100 min-h-[100px] p-1 relative group transition-colors ${isBlocked ? 'bg-slate-100' : 'hover:bg-slate-50'
-                          }`}
-                      >
-                        {!isBlocked ? (
-                          <button
-                            onClick={() => openAssignmentModal(day, slot)}
-                            // Disable if no selection
-                            disabled={(!selectedTeacherId && viewMode === 'teachers') || (!selectedClassroomId && viewMode === 'classrooms')}
-                            className="w-full h-full rounded border-2 border-dashed border-transparent group-hover:border-slate-200 flex items-center justify-center text-slate-300 group-hover:text-blue-500 transition-all disabled:cursor-not-allowed disabled:group-hover:border-transparent disabled:group-hover:text-slate-300"
-                          >
-                            <Plus size={24} />
-                          </button>
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center opacity-30 cursor-not-allowed" title="Horario bloqueado por el docente">
-                            <Ban size={24} className="text-slate-400" />
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </React.Fragment>
-              ))}
+                    })}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -1864,6 +2271,25 @@ const ScheduleView = () => {
             </button>
           </div>
 
+          {/* Conflict Warnings */}
+          {selectedCell && formSubjectId && (
+            <div className="space-y-2 mb-4">
+              {/* Teacher Availability Check */}
+              {formTeacherId && state.teachers.find(t => t.id === formTeacherId)?.unavailableSlots?.includes(`${selectedCell.day}-${selectedCell.slot.id}`) && (
+                <div className="flex items-center gap-2 p-2 bg-red-50 text-red-700 text-xs border border-red-100 rounded">
+                  <AlertTriangle size={14} /> El docente está bloqueado en este horario.
+                </div>
+              )}
+              {/* Subject Day Preference Check */}
+              {formSubjectId && state.subjects.find(s => s.id === formSubjectId)?.preferredDays?.length! > 0 &&
+                !state.subjects.find(s => s.id === formSubjectId)?.preferredDays?.includes(selectedCell.day) && (
+                  <div className="flex items-center gap-2 p-2 bg-amber-50 text-amber-700 text-xs border border-amber-100 rounded">
+                    <Info size={14} /> Este día no es preferido para esta materia.
+                  </div>
+                )}
+            </div>
+          )}
+
           <form onSubmit={handleSave} className="space-y-4">
 
             {/* GROUP SELECTION (If in Group Mode) */}
@@ -1876,16 +2302,16 @@ const ScheduleView = () => {
                   onChange={(e) => handleGroupSelect(e.target.value)}
                   required={assignMode === 'group'}
                 >
-                  <option value="">-- Selecciona un paralelo pendiente --</option>
-                  {pendingGroups.map(g => {
-                    const sub = state.subjects.find(s => s.id === g.subjectId);
+                  <option value="">-- Selecciona una sesión pendiente --</option>
+                  {pendingSessions.map(s => {
+                    const sub = state.subjects.find(sub => sub.id === s.subjectId);
                     return (
-                      <option key={g.id} value={g.id}>
-                        {sub?.name} - {g.name} (Faltan {g.remaining}h)
+                      <option key={s.id} value={s.id}>
+                        {sub?.name} - {s.groupName} (Bloque {s.hours}h)
                       </option>
                     )
                   })}
-                  {pendingGroups.length === 0 && <option disabled>No hay grupos pendientes</option>}
+                  {pendingSessions.length === 0 && <option disabled>No hay sesiones pendientes</option>}
                 </select>
                 {selectedGroupId && (
                   <p className="text-xs text-blue-600 mt-1 flex items-center gap-1">

@@ -69,6 +69,30 @@ Necesidad de instanciar materias abstractas en grupos concretos ("Paralelos") an
     *   Indicadores de "Fijo" cuando se está en la vista de un recurso específico.
     *   Estado de "Completado" en la sidebar cuando se asignan todas las horas de un grupo.
 
-### Próximos Pasos (Fase 4):
+### Próximos Pasos (Fase 4/6):
 *   Implementar Drag & Drop para mejorar la ergonomía de arrastrar desde "Pendientes" hacia la grilla.
-*   Generación de reportes finales.
+*   Optimización de Recursos: Room Balancer para eficiencia de ocupación.
+
+---
+
+## Fase 5: Inteligencia Académica y Reglas de Negocio
+**Estado:** ✅ Completado
+**Fecha:** 2026-02-18
+
+### Hitos Alcanzados:
+1.  **Patrones de Sesión (Split Classes):**
+    *   Soporte para dividir horas de una materia en bloques (ej. 2+2, 2+1).
+    *   Sidebar de pendientes desglosada por sesiones individuales.
+    *   Generación automática de paralelos respetando el patrón definido en la materia.
+
+2.  **Especialización Docente:**
+    *   Vinculación de profesores con materias específicas (`allowedSubjectIds`).
+    *   Filtrado inteligente en el planificador: solo se muestran sesiones que el docente puede dictar.
+
+3.  **Restricciones Temporales (Reglas de "Inglés"):**
+    *   Definición de días preferidos por materia (`preferredDays`).
+    *   Validación visual y alertas en el modal de asignación si se intenta agendar en un día no deseado.
+
+4.  **Optimización de Carga Docente:**
+    *   Visualización de carga actual en tiempo real en los selectores de la oferta académica.
+    *   Alertas de sobrecarga horaria.

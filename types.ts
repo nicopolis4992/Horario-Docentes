@@ -37,6 +37,10 @@ export interface Subject {
   area: SubjectArea; // New field for the degree axis
   preferredDays?: DayOfWeek[]; // Restricted days for this subject (e.g., Mon/Wed/Fri)
   requiredClassroomType?: ClassroomType; // Mapping for automated generation
+  preferredTeacherId?: string;
+  allowedClassroomIds?: string[];
+  allowedClassroomTypes?: ClassroomType[];
+  sessionPattern?: number[]; // Default pattern for generated groups (e.g., [2, 1])
 }
 
 // Represents a concrete instance of a Subject (A "Parallel" or "Group")
@@ -66,6 +70,7 @@ export interface ScheduleAssignment {
   classroomId: string;
   day: DayOfWeek;
   timeSlotId: string;
+  isSplit?: boolean; // If true, this assignment will not be unified with the previous one visually
 }
 
 export interface AppState {

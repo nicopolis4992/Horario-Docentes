@@ -44,9 +44,9 @@
 - [ ] **Reportes:** Exportación CSV/PDF para secretaría académica.
 
 ### Fase 5: Inteligencia Académica (MVP++)
-- [ ] **Módulo de Especialidades:** Vincular docentes con áreas de conocimiento.
-- [ ] **Pattern Scheduler:** Soporte para sesiones `2+1` y `1+1+1`.
-- [ ] **Reglas de Inglés:** Restricciones de días a nivel de materia.
+- [x] **Módulo de Especialidades:** Vincular docentes con áreas de conocimiento.
+- [x] **Pattern Scheduler:** Soporte para sesiones `2+1` y `1+1+1`.
+- [x] **Reglas de Días Preferidos:** Restricciones de días a nivel de materia (Caso "Inglés").
 
 ### Fase 6: Optimización de Recursos (Escalabilidad)
 - [ ] **Room Balancer:** Indicador visual de eficiencia de ocupación.
