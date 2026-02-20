@@ -38,12 +38,32 @@ const OfferPlannerView = () => {
         [state.courseGroups, selectedSubjectId]
     );
 
+    // Helper to get usage of a classroom in all defined groups (+ optional extra counts)
+    const getClassroomUsage = (roomId: string, extraCounts?: Map<string, number>) => {
+        const baseCount = state.courseGroups.filter(g => g.plannedClassroomId === roomId).length;
+        return baseCount + (extraCounts?.get(roomId) || 0);
+    };
+
+    // Returns sorted list of eligible classrooms for a subject
+    const getEligibleRooms = (subject: Subject, extraCounts?: Map<string, number>) => {
+        let rooms = [] as typeof state.classrooms;
+
+        if (subject.allowedClassroomIds && subject.allowedClassroomIds.length > 0) {
+            rooms = state.classrooms.filter(c => subject.allowedClassroomIds?.includes(c.id));
+        } else if (subject.allowedClassroomTypes && subject.allowedClassroomTypes.length > 0) {
+            rooms = state.classrooms.filter(c => subject.allowedClassroomTypes?.includes(c.type));
+        } else {
+            rooms = [...state.classrooms];
+        }
+
+        return rooms.sort((a, b) => getClassroomUsage(a.id, extraCounts) - getClassroomUsage(b.id, extraCounts));
+    };
+
     // Helper for Auto-Assignment
     const suggestTeacherAndRoom = (subject: Subject) => {
         // 1. Suggest Teacher
         let suggestedTeacherId = subject.preferredTeacherId;
         if (!suggestedTeacherId) {
-            // Priority 1: Specialist Teachers
             const eligibleTeachers = state.teachers.filter(t =>
                 t.allowedSubjectIds?.includes(subject.id)
             ).sort((a, b) => getTeacherTotalLoad(a.id) - getTeacherTotalLoad(b.id));
@@ -51,7 +71,6 @@ const OfferPlannerView = () => {
             if (eligibleTeachers.length > 0) {
                 suggestedTeacherId = eligibleTeachers[0].id;
             } else {
-                // Priority 2: Fallback to any teacher, sorted by current load
                 const anyTeachers = [...state.teachers].sort((a, b) =>
                     getTeacherTotalLoad(a.id) - getTeacherTotalLoad(b.id)
                 );
@@ -59,55 +78,30 @@ const OfferPlannerView = () => {
             }
         }
 
-        // 2. Suggest Room (Load Balancing)
-        let suggestedRoomId = '';
+        // 2. Suggest Room (first eligible, sorted by load)
+        const eligibleRooms = getEligibleRooms(subject);
+        const suggestedRoomId = eligibleRooms[0]?.id || '';
 
-        // Helper to get usage of a classroom in all defined groups
-        const getClassroomUsage = (roomId: string) => {
-            return state.courseGroups.filter(g => g.plannedClassroomId === roomId).length;
-        };
-
-        // Priority 1: Specific Rooms defined in Subject
-        if (subject.allowedClassroomIds && subject.allowedClassroomIds.length > 0) {
-            // Pick the one with the least groups assigned
-            const eligibleRooms = state.classrooms
-                .filter(c => subject.allowedClassroomIds?.includes(c.id))
-                .sort((a, b) => getClassroomUsage(a.id) - getClassroomUsage(b.id));
-
-            suggestedRoomId = eligibleRooms[0]?.id || '';
-        }
-        // Priority 2: Room Types
-        else if (subject.allowedClassroomTypes && subject.allowedClassroomTypes.length > 0) {
-            const matchingRooms = state.classrooms
-                .filter(c => subject.allowedClassroomTypes?.includes(c.type))
-                .sort((a, b) => getClassroomUsage(a.id) - getClassroomUsage(b.id));
-
-            suggestedRoomId = matchingRooms[0]?.id || '';
-        }
-        // Priority 3: Any room (fallback for balancing)
-        else if (state.classrooms.length > 0) {
-            const allRoomsSorted = [...state.classrooms]
-                .sort((a, b) => getClassroomUsage(a.id) - getClassroomUsage(b.id));
-            suggestedRoomId = allRoomsSorted[0].id;
-        }
-
-        return { suggestedTeacherId, suggestedRoomId };
+        return { suggestedTeacherId, suggestedRoomId, eligibleRooms };
     };
 
     const handleCalculate = () => {
         if (!selectedSubject) return;
 
-        // Use preference or UI baseClassroomId or fallback
-        const { suggestedRoomId, suggestedTeacherId } = suggestTeacherAndRoom(selectedSubject);
-        const finalRoomId = baseClassroomId || suggestedRoomId || state.classrooms[0]?.id;
+        const { suggestedTeacherId, eligibleRooms } = suggestTeacherAndRoom(selectedSubject);
 
-        const classroom = state.classrooms.find(c => c.id === finalRoomId);
-        if (!classroom) return;
+        // If user picked a specific base classroom, use that as the reference for capacity
+        // but still round-robin across eligible rooms
+        const refRoomId = baseClassroomId || eligibleRooms[0]?.id || state.classrooms[0]?.id;
+        const refRoom = state.classrooms.find(c => c.id === refRoomId);
+        if (!refRoom) return;
 
-        const capacity = useMaxCapacity ? classroom.maxCapacity : classroom.recommendedCapacity;
+        const capacity = useMaxCapacity ? refRoom.maxCapacity : refRoom.recommendedCapacity;
         const totalStudents = selectedSubject.projectedStudents;
-
         const numberOfGroups = Math.ceil(totalStudents / capacity);
+
+        // Use eligible rooms for round-robin; fallback to refRoom if none
+        const roomPool = eligibleRooms.length > 0 ? eligibleRooms : [refRoom];
 
         const newGroups: Partial<CourseGroup>[] = [];
         let studentsRemaining = totalStudents;
@@ -116,13 +110,16 @@ const OfferPlannerView = () => {
             const count = Math.min(capacity, studentsRemaining);
             studentsRemaining -= count;
 
+            // Round-robin: cycle through eligible rooms
+            const assignedRoom = roomPool[i % roomPool.length];
+
             newGroups.push({
                 id: crypto.randomUUID(),
                 subjectId: selectedSubject.id,
                 name: `Paralelo ${String.fromCharCode(65 + i)}`,
                 studentCount: count,
                 totalHours: selectedSubject.credits,
-                plannedClassroomId: classroom.id,
+                plannedClassroomId: assignedRoom.id,
                 teacherId: suggestedTeacherId,
                 sessionPattern: selectedSubject.sessionPattern
             });
@@ -181,14 +178,18 @@ const OfferPlannerView = () => {
         if (subjectsToPlan.length === 0) return;
 
         const allNewGroups: CourseGroup[] = [];
+        // Track extra classroom usage across the entire batch
+        const batchUsageCounts = new Map<string, number>();
 
         subjectsToPlan.forEach(subject => {
-            const { suggestedRoomId, suggestedTeacherId } = suggestTeacherAndRoom(subject);
-            const roomId = suggestedRoomId || state.classrooms[0]?.id;
-            const classroom = state.classrooms.find(c => c.id === roomId);
-            if (!classroom) return;
+            const { suggestedTeacherId } = suggestTeacherAndRoom(subject);
 
-            const capacity = classroom.recommendedCapacity;
+            // Get eligible rooms sorted by usage (including batch counts)
+            const eligibleRooms = getEligibleRooms(subject, batchUsageCounts);
+            if (eligibleRooms.length === 0) return;
+
+            const refRoom = eligibleRooms[0];
+            const capacity = refRoom.recommendedCapacity;
             const totalStudents = subject.projectedStudents;
             const numberOfGroups = Math.ceil(totalStudents / capacity);
 
@@ -198,16 +199,25 @@ const OfferPlannerView = () => {
                 const count = Math.min(capacity, studentsRemaining);
                 studentsRemaining -= count;
 
+                // Re-sort eligible rooms by current usage (base + batch) for true balancing
+                const sortedRooms = [...eligibleRooms].sort((a, b) =>
+                    getClassroomUsage(a.id, batchUsageCounts) - getClassroomUsage(b.id, batchUsageCounts)
+                );
+                const assignedRoom = sortedRooms[0];
+
                 allNewGroups.push({
                     id: crypto.randomUUID(),
                     subjectId: subject.id,
                     name: `Paralelo ${String.fromCharCode(65 + i)}`,
                     studentCount: count,
                     totalHours: subject.credits,
-                    plannedClassroomId: classroom.id,
+                    plannedClassroomId: assignedRoom.id,
                     teacherId: suggestedTeacherId,
                     sessionPattern: subject.sessionPattern
                 });
+
+                // Increment batch usage counter
+                batchUsageCounts.set(assignedRoom.id, (batchUsageCounts.get(assignedRoom.id) || 0) + 1);
             }
         });
 
