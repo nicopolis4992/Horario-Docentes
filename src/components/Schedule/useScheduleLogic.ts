@@ -1,0 +1,536 @@
+import React, { useState, useMemo } from 'react';
+import { useAppStore } from '../../../store';
+import {
+    DayOfWeek,
+    TimeSlot,
+    ScheduleAssignment
+} from '../../../types';
+import { generateTimeSlots } from '../../../utils';
+import { DragEndEvent, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
+
+export interface PendingSession {
+    id: string;
+    groupId: string;
+    subjectId: string;
+    groupName: string;
+    hours: number;
+    sessionIndex: number;
+}
+
+export const DAYS: DayOfWeek[] = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+export const useScheduleLogic = () => {
+    const { state, dispatch } = useAppStore();
+    const timeSlots = generateTimeSlots();
+
+    // View Mode: 'teachers' or 'classrooms'
+    const [viewMode, setViewMode] = useState<'teachers' | 'classrooms'>('teachers');
+
+    // Selection State
+    const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null);
+    const [selectedClassroomId, setSelectedClassroomId] = useState<string | null>(null);
+
+    // Modal State
+    const [selectedCell, setSelectedCell] = useState<{ day: DayOfWeek; slot: TimeSlot } | null>(null);
+
+    // Modal Form State
+    const [assignMode, setAssignMode] = useState<'group' | 'manual'>('group');
+    const [selectedGroupId, setSelectedGroupId] = useState('');
+
+    const [formSubjectId, setFormSubjectId] = useState('');
+    const [formTeacherId, setFormTeacherId] = useState('');
+    const [formClassroomId, setFormClassroomId] = useState('');
+    const [editingAssignmentIds, setEditingAssignmentIds] = useState<string[] | null>(null);
+
+    const [activeId, setActiveId] = useState<string | null>(null);
+
+    // Toggle for showing ALL pending sessions in Aulas mode
+    const [showAllPending, setShowAllPending] = useState(false);
+
+    // --- Pending Sessions (ALL, unfiltered) ---
+    const allPendingSessions = useMemo(() => {
+        const sessions: PendingSession[] = [];
+
+        state.courseGroups.forEach(group => {
+            const pattern = group.sessionPattern || [group.totalHours];
+            const groupAssignments = state.assignments.filter(a => a.courseGroupId === group.id);
+
+            let assignedRemaining = groupAssignments.length;
+
+            pattern.forEach((hours, idx) => {
+                if (assignedRemaining >= hours) {
+                    assignedRemaining -= hours;
+                } else if (assignedRemaining > 0) {
+                    const remainingInSession = hours - assignedRemaining;
+                    sessions.push({
+                        id: `${group.id}-s${idx}`,
+                        groupId: group.id,
+                        subjectId: group.subjectId,
+                        groupName: group.name,
+                        hours: remainingInSession,
+                        sessionIndex: idx
+                    });
+                    assignedRemaining = 0;
+                } else {
+                    sessions.push({
+                        id: `${group.id}-s${idx}`,
+                        groupId: group.id,
+                        subjectId: group.subjectId,
+                        groupName: group.name,
+                        hours: hours,
+                        sessionIndex: idx
+                    });
+                }
+            });
+        });
+
+        return sessions;
+    }, [state.courseGroups, state.assignments]);
+
+    // --- Pending Sessions (Filtered by context) ---
+    const pendingSessions = useMemo(() => {
+        let filtered = allPendingSessions;
+
+        if (viewMode === 'teachers' && selectedTeacherId) {
+            filtered = filtered.filter(s => {
+                const group = state.courseGroups.find(g => g.id === s.groupId);
+                return group?.teacherId === selectedTeacherId;
+            });
+        } else if (viewMode === 'classrooms' && selectedClassroomId) {
+            if (showAllPending) {
+                // Show ALL pending sessions (toggle is active)
+                // Already unfiltered
+            } else {
+                // Show only sessions planned for this classroom
+                filtered = filtered.filter(s => {
+                    const group = state.courseGroups.find(g => g.id === s.groupId);
+                    return group?.plannedClassroomId === selectedClassroomId;
+                });
+            }
+        } else {
+            filtered = [];
+        }
+
+        return filtered;
+    }, [allPendingSessions, state.courseGroups, viewMode, selectedTeacherId, selectedClassroomId, showAllPending]);
+
+    const activeSession = useMemo(() =>
+        pendingSessions.find(s => s.id === activeId) || allPendingSessions.find(s => s.id === activeId),
+        [pendingSessions, allPendingSessions, activeId]);
+
+    const activeAssignment = useMemo(() =>
+        activeId ? state.assignments.find(a => a.id === activeId) : null,
+        [state.assignments, activeId]);
+
+    // Handle Tab Change
+    const handleTabChange = (mode: 'teachers' | 'classrooms') => {
+        setViewMode(mode);
+    };
+
+    // Helper to open modal based on current context
+    const openAssignmentModal = (day: DayOfWeek, slot: TimeSlot, existingAssignmentIds?: string[]) => {
+        setSelectedCell({ day, slot });
+        setEditingAssignmentIds(existingAssignmentIds || null);
+
+        const assignment = existingAssignmentIds && existingAssignmentIds.length > 0
+            ? state.assignments.find(a => a.id === existingAssignmentIds[0])
+            : null;
+
+        if (assignment) {
+            setAssignMode('group');
+            setSelectedGroupId(assignment.courseGroupId);
+            setFormSubjectId(assignment.subjectId);
+            setFormTeacherId(assignment.teacherId);
+            setFormClassroomId(assignment.classroomId);
+        } else {
+            // Auto-fill context for NEW assignment
+            if (viewMode === 'teachers' && selectedTeacherId) {
+                setFormTeacherId(selectedTeacherId);
+                setFormClassroomId('');
+            } else if (viewMode === 'classrooms' && selectedClassroomId) {
+                setFormClassroomId(selectedClassroomId);
+                setFormTeacherId('');
+            } else {
+                setFormTeacherId('');
+                setFormClassroomId('');
+            }
+            setFormSubjectId('');
+            setSelectedGroupId('');
+            setAssignMode('group');
+        }
+    };
+
+    const closeModal = () => {
+        setSelectedCell(null);
+        setFormSubjectId('');
+        setFormTeacherId('');
+        setFormClassroomId('');
+        setSelectedGroupId('');
+        setEditingAssignmentIds(null);
+    };
+
+    // Handle Group Selection change
+    const handleGroupSelect = (sessionId: string) => {
+        setSelectedGroupId(sessionId);
+        if (!sessionId) return;
+
+        // Search in both filtered and all sessions for the toggle case
+        const session = pendingSessions.find(s => s.id === sessionId) || allPendingSessions.find(s => s.id === sessionId);
+        if (session) {
+            const group = state.courseGroups.find(g => g.id === session.groupId);
+            if (group) {
+                setFormSubjectId(group.subjectId);
+                if (group.teacherId) setFormTeacherId(group.teacherId);
+                if (group.plannedClassroomId) setFormClassroomId(group.plannedClassroomId);
+            }
+        }
+    };
+
+    const handleSave = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedCell || !formSubjectId || !formTeacherId || !formClassroomId) return;
+
+        if (editingAssignmentIds && editingAssignmentIds.length > 0) {
+            // UPDATE MODE: Update teacher/classroom for existing slot(s)
+            editingAssignmentIds.forEach(id => {
+                const original = state.assignments.find(a => a.id === id);
+                if (original) {
+                    dispatch({
+                        type: 'UPDATE_ASSIGNMENT',
+                        payload: {
+                            ...original,
+                            teacherId: formTeacherId,
+                            classroomId: formClassroomId
+                        }
+                    });
+                }
+            });
+        } else if (assignMode === 'group' && selectedGroupId) {
+            const session = pendingSessions.find(s => s.id === selectedGroupId) || allPendingSessions.find(s => s.id === selectedGroupId);
+            if (session) {
+                assignSessionToCell(session, selectedCell.day, selectedCell.slot.id, formTeacherId, formClassroomId);
+            }
+        } else {
+            // Manual single slot
+            dispatch({
+                type: 'ADD_ASSIGNMENT',
+                payload: {
+                    id: crypto.randomUUID(),
+                    day: selectedCell.day,
+                    timeSlotId: selectedCell.slot.id,
+                    subjectId: formSubjectId,
+                    teacherId: formTeacherId,
+                    classroomId: formClassroomId,
+                    courseGroupId: undefined
+                }
+            });
+        }
+        closeModal();
+    };
+
+    const assignSessionToCell = (session: PendingSession, day: DayOfWeek, slotId: string, teacherId: string, classroomId: string) => {
+        const hoursToAssign = session.hours;
+        const currentSlotIndex = timeSlots.findIndex(s => s.id === slotId);
+
+        const newAssignments: ScheduleAssignment[] = [];
+
+        for (let i = 0; i < hoursToAssign; i++) {
+            const slot = timeSlots[currentSlotIndex + i];
+            if (!slot) break;
+
+            newAssignments.push({
+                id: crypto.randomUUID(),
+                day: day,
+                timeSlotId: slot.id,
+                subjectId: session.subjectId,
+                teacherId: teacherId,
+                classroomId: classroomId,
+                courseGroupId: session.groupId
+            });
+        }
+
+        newAssignments.forEach(a => dispatch({ type: 'ADD_ASSIGNMENT', payload: a }));
+    };
+
+    const validateMove = (
+        day: DayOfWeek,
+        slotId: string,
+        span: number,
+        teacherId: string,
+        classroomId: string,
+        subjectId: string,
+        excludeAssignmentIds?: string[]
+    ) => {
+        const currentSlotIndex = timeSlots.findIndex(s => s.id === slotId);
+        const subject = state.subjects.find(s => s.id === subjectId);
+
+        for (let i = 0; i < span; i++) {
+            const slot = timeSlots[currentSlotIndex + i];
+            if (!slot) return { valid: false, error: 'La sesión no cabe al final del día.' };
+
+            const slotKey = `${day}-${slot.id}`;
+
+            // 1. Teacher Overlap
+            const teacherBusy = state.assignments.some(a =>
+                a.day === day &&
+                a.timeSlotId === slot.id &&
+                a.teacherId === teacherId &&
+                !excludeAssignmentIds?.includes(a.id)
+            );
+            if (teacherBusy) return { valid: false, error: `El docente ya tiene una clase de "${state.subjects.find(s => s.id === state.assignments.find(x => x.day === day && x.timeSlotId === slot.id && x.teacherId === teacherId)?.subjectId)?.name}" el ${day} a las ${slot.start}.` };
+
+            // 2. Classroom Overlap
+            const roomBusy = state.assignments.some(a =>
+                a.day === day &&
+                a.timeSlotId === slot.id &&
+                a.classroomId === classroomId &&
+                !excludeAssignmentIds?.includes(a.id)
+            );
+            if (roomBusy) return { valid: false, error: `El aula ya está ocupada el ${day} a las ${slot.start}.` };
+
+            // 3. Teacher Restrictions
+            const teacher = state.teachers.find(t => t.id === teacherId);
+            if (teacher?.unavailableSlots?.includes(slotKey)) {
+                return { valid: false, error: `El docente tiene bloqueado el horario ${day} ${slot.start}.` };
+            }
+
+            // 4. Subject Restrictions (Preferred Days)
+            if (subject?.preferredDays && subject.preferredDays.length > 0 && !subject.preferredDays.includes(day)) {
+                return { valid: false, error: `El día ${day} no está entre los días preferidos para esta materia.` };
+            }
+        }
+
+        return { valid: true };
+    };
+
+    const handleDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+        setActiveId(null);
+
+        if (!over || over.data.current?.type !== 'cell') return;
+
+        const dropDay = over.data.current.day as DayOfWeek;
+        const dropSlotId = over.data.current.slotId;
+
+        if (active.data.current?.type === 'session') {
+            const session = active.data.current.session;
+            const group = state.courseGroups.find(g => g.id === session.groupId);
+
+            let teacherId = group?.teacherId || (viewMode === 'teachers' ? selectedTeacherId || '' : '');
+            // In classrooms mode, ALWAYS use the selected classroom (the one being viewed)
+            // This enables cross-classroom reassignment via drag & drop
+            let classroomId = viewMode === 'classrooms' && selectedClassroomId
+                ? selectedClassroomId
+                : (group?.plannedClassroomId || '');
+
+            if (!teacherId || !classroomId) {
+                // If missing, open modal to complete data
+                setSelectedCell({ day: dropDay, slot: timeSlots.find(s => s.id === dropSlotId)! });
+                setSelectedGroupId(session.id);
+                setAssignMode('group');
+                setFormSubjectId(session.subjectId);
+                setFormTeacherId(teacherId);
+                setFormClassroomId(classroomId);
+                return;
+            }
+
+            const validation = validateMove(dropDay, dropSlotId, session.hours, teacherId, classroomId, session.subjectId);
+            if (!validation.valid) {
+                alert(`No se puede asignar: ${validation.error}`);
+                return;
+            }
+
+            assignSessionToCell(session, dropDay, dropSlotId, teacherId, classroomId);
+        } else if (active.data.current?.type === 'assignment') {
+            const { span, assignmentIds } = active.data.current;
+            const firstId = assignmentIds[0];
+            const assignment = state.assignments.find(a => a.id === firstId);
+
+            if (!assignment) return;
+
+            // In classrooms mode, use the currently selected classroom as target
+            const targetClassroomId = viewMode === 'classrooms' && selectedClassroomId
+                ? selectedClassroomId
+                : assignment.classroomId;
+
+            const validation = validateMove(
+                dropDay,
+                dropSlotId,
+                span,
+                assignment.teacherId,
+                targetClassroomId,
+                assignment.subjectId,
+                assignmentIds
+            );
+
+            if (!validation.valid) {
+                alert(`Movimiento inválido: ${validation.error}`);
+                return;
+            }
+
+            // Perform Move
+            const currentSlotIndex = timeSlots.findIndex(s => s.id === dropSlotId);
+
+            // Delete old assignments
+            assignmentIds.forEach((id: string) => dispatch({ type: 'DELETE_ASSIGNMENT', payload: id }));
+
+            // Add new ones
+            for (let i = 0; i < span; i++) {
+                const slot = timeSlots[currentSlotIndex + i];
+                dispatch({
+                    type: 'ADD_ASSIGNMENT',
+                    payload: {
+                        ...assignment,
+                        id: crypto.randomUUID(),
+                        day: dropDay,
+                        timeSlotId: slot.id,
+                        classroomId: targetClassroomId
+                    }
+                });
+            }
+        }
+    };
+
+    const handleDragStart = (event: DragStartEvent) => {
+        setActiveId(event.active.id as string);
+    };
+
+    const sensors = useSensors(
+        useSensor(MouseSensor, { activationConstraint: { distance: 10 } }),
+        useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } })
+    );
+
+    const handleDeleteAssignment = (assignmentId: string, multipleIds?: string[]) => {
+        if (confirm('¿Eliminar esta hora de clase?')) {
+            if (multipleIds && multipleIds.length > 0) {
+                dispatch({ type: 'DELETE_MULTIPLE_ASSIGNMENTS', payload: multipleIds });
+            } else {
+                dispatch({ type: 'DELETE_ASSIGNMENT', payload: assignmentId });
+            }
+        }
+    };
+
+    const handleSplitAssignment = (assignmentId: string) => {
+        const assignment = state.assignments.find(a => a.id === assignmentId);
+        if (assignment) {
+            dispatch({
+                type: 'UPDATE_ASSIGNMENT',
+                payload: { ...assignment, isSplit: true }
+            });
+        }
+    };
+
+    const handleAutoAssignAll = () => {
+        const newAssignments: ScheduleAssignment[] = [];
+
+        const allPendingGroups = state.courseGroups.map(group => {
+            const assignedCount = state.assignments.filter(a => a.courseGroupId === group.id).length;
+            return {
+                ...group,
+                remaining: group.totalHours - assignedCount
+            };
+        }).filter(g => g.remaining > 0);
+
+        const occupiedSlots = new Set(state.assignments.map(a => `${a.day}-${a.timeSlotId}-${a.teacherId}`));
+        const occupiedRooms = new Set(state.assignments.map(a => `${a.day}-${a.timeSlotId}-${a.classroomId}`));
+
+        allPendingGroups.forEach(group => {
+            const subject = state.subjects.find(s => s.id === group.subjectId);
+            if (!subject) return;
+
+            const hoursToAssign = group.remaining;
+            const teacherId = group.teacherId;
+            if (!teacherId) return;
+
+            const teacher = state.teachers.find(t => t.id === teacherId);
+            const preferredDays = subject.preferredDays && subject.preferredDays.length > 0 ? subject.preferredDays : DAYS;
+
+            let assigned = false;
+
+            const sortedPreferredDays = [...preferredDays].sort((a, b) => {
+                const slotsArray = Array.from(occupiedSlots as Set<string>);
+                const countA = slotsArray.filter(k => k.startsWith(`${a}-`)).length;
+                const countB = slotsArray.filter(k => k.startsWith(`${b}-`)).length;
+                return countA - countB;
+            });
+
+            for (const day of sortedPreferredDays) {
+                if (assigned) break;
+
+                for (let i = 0; i <= timeSlots.length - hoursToAssign; i++) {
+                    if (assigned) break;
+
+                    let canFit = true;
+                    const potentialSlots: string[] = [];
+
+                    for (let j = 0; j < hoursToAssign; j++) {
+                        const slot = timeSlots[i + j];
+                        const slotKey = `${day}-${slot.id}`;
+
+                        const teacherBusy = occupiedSlots.has(`${slotKey}-${teacherId}`) ||
+                            teacher?.unavailableSlots?.includes(slotKey);
+
+                        const roomBusy = group.plannedClassroomId &&
+                            occupiedRooms.has(`${slotKey}-${group.plannedClassroomId}`);
+
+                        if (teacherBusy || roomBusy) {
+                            canFit = false;
+                            break;
+                        }
+                        potentialSlots.push(slot.id);
+                    }
+
+                    if (canFit) {
+                        potentialSlots.forEach(slotId => {
+                            const aId = crypto.randomUUID();
+                            const payload = {
+                                id: aId,
+                                day: day,
+                                timeSlotId: slotId,
+                                subjectId: group.subjectId,
+                                teacherId: teacherId,
+                                classroomId: group.plannedClassroomId || state.classrooms[0]?.id || '',
+                                courseGroupId: group.id
+                            };
+                            newAssignments.push(payload);
+                            occupiedSlots.add(`${day}-${slotId}-${teacherId}`);
+                            if (payload.classroomId) occupiedRooms.add(`${day}-${slotId}-${payload.classroomId}`);
+                        });
+                        assigned = true;
+                    }
+                }
+            }
+        });
+
+        if (newAssignments.length > 0) {
+            newAssignments.forEach(a => dispatch({ type: 'ADD_ASSIGNMENT', payload: a }));
+        }
+    };
+
+    return {
+        // State
+        state, dispatch, timeSlots,
+        viewMode, selectedTeacherId, selectedClassroomId,
+        selectedCell, assignMode, selectedGroupId,
+        formSubjectId, formTeacherId, formClassroomId,
+        editingAssignmentIds, activeId,
+        showAllPending,
+
+        // Setters
+        setSelectedTeacherId, setSelectedClassroomId,
+        setAssignMode, setFormSubjectId, setFormTeacherId, setFormClassroomId,
+        setShowAllPending,
+
+        // Computed
+        pendingSessions, allPendingSessions,
+        activeSession, activeAssignment,
+        sensors,
+
+        // Handlers
+        handleTabChange, openAssignmentModal, closeModal,
+        handleGroupSelect, handleSave,
+        handleDragEnd, handleDragStart,
+        handleDeleteAssignment, handleSplitAssignment,
+        handleAutoAssignAll, validateMove
+    };
+};

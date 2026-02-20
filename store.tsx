@@ -21,10 +21,17 @@ type Action =
   | { type: 'UPDATE_COURSE_GROUP'; payload: CourseGroup }
   | { type: 'DELETE_COURSE_GROUP'; payload: string } // id
   | { type: 'BULK_ADD_COURSE_GROUPS'; payload: CourseGroup[] } // Helper for the wizard
+  | { type: 'CLEAR_ALL_COURSE_GROUPS' }
+  | { type: 'CLEAR_SUBJECT_COURSE_GROUPS'; payload: string } // subjectId
+  | { type: 'JOIN_ASSIGNMENTS'; payload: { courseGroupId: string; day: string } }
   // Assignments
   | { type: 'ADD_ASSIGNMENT'; payload: ScheduleAssignment }
   | { type: 'UPDATE_ASSIGNMENT'; payload: ScheduleAssignment }
   | { type: 'DELETE_ASSIGNMENT'; payload: string } // id
+  | { type: 'DELETE_MULTIPLE_ASSIGNMENTS'; payload: string[] } // ids
+  | { type: 'CLEAR_ALL_ASSIGNMENTS' }
+  | { type: 'CLEAR_TEACHER_ASSIGNMENTS'; payload: string } // teacherId
+  | { type: 'CLEAR_CLASSROOM_ASSIGNMENTS'; payload: string } // classroomId
   // System
   | { type: 'RESET_DATA' };
 
@@ -101,18 +108,29 @@ const appReducer = (state: AppState, action: Action): AppState => {
         courseGroups: state.courseGroups.map((g) =>
           g.id === action.payload.id ? action.payload : g
         ),
+        // Cascade update: If teacher or classroom changed, update all existing assignments for this group
+        assignments: state.assignments.map(a =>
+          a.courseGroupId === action.payload.id
+            ? { ...a, teacherId: action.payload.teacherId || a.teacherId, classroomId: action.payload.plannedClassroomId || a.classroomId }
+            : a
+        )
       };
     case 'DELETE_COURSE_GROUP':
       return {
         ...state,
-        // 1. Remove the group itself
         courseGroups: state.courseGroups.filter((g) => g.id !== action.payload),
-        // 2. Cascading delete: Remove assignments linked to this group
         assignments: state.assignments.filter((a) => a.courseGroupId !== action.payload)
       };
     case 'BULK_ADD_COURSE_GROUPS':
       return { ...state, courseGroups: [...state.courseGroups, ...action.payload] };
-
+    case 'CLEAR_ALL_COURSE_GROUPS':
+      return { ...state, courseGroups: [], assignments: [] };
+    case 'CLEAR_SUBJECT_COURSE_GROUPS':
+      return {
+        ...state,
+        courseGroups: state.courseGroups.filter(g => g.subjectId !== action.payload),
+        assignments: state.assignments.filter(a => a.subjectId !== action.payload)
+      };
 
     // --- Assignments ---
     case 'ADD_ASSIGNMENT':
@@ -128,6 +146,32 @@ const appReducer = (state: AppState, action: Action): AppState => {
       return {
         ...state,
         assignments: state.assignments.filter((a) => a.id !== action.payload),
+      };
+    case 'DELETE_MULTIPLE_ASSIGNMENTS':
+      return {
+        ...state,
+        assignments: state.assignments.filter((a) => !action.payload.includes(a.id)),
+      };
+    case 'JOIN_ASSIGNMENTS':
+      return {
+        ...state,
+        assignments: state.assignments.map(a =>
+          a.courseGroupId === action.payload.courseGroupId && a.day === action.payload.day
+            ? { ...a, isSplit: false }
+            : a
+        )
+      };
+    case 'CLEAR_ALL_ASSIGNMENTS':
+      return { ...state, assignments: [] };
+    case 'CLEAR_TEACHER_ASSIGNMENTS':
+      return {
+        ...state,
+        assignments: state.assignments.filter(a => a.teacherId !== action.payload)
+      };
+    case 'CLEAR_CLASSROOM_ASSIGNMENTS':
+      return {
+        ...state,
+        assignments: state.assignments.filter(a => a.classroomId !== action.payload)
       };
 
     // --- System ---
