@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { CLASSROOM_CONFIG } from '../../../utils';
 import Modal from '../Common/Modal';
+import toast from 'react-hot-toast';
 
 const ClassroomsView = () => {
     const { state, dispatch } = useAppStore();
@@ -54,9 +55,30 @@ const ClassroomsView = () => {
     };
 
     const handleDelete = (id: string) => {
-        if (confirm('¿Eliminar aula?')) {
-            dispatch({ type: 'DELETE_CLASSROOM', payload: id });
-        }
+        toast((t) => (
+            <div className="flex flex-col gap-3">
+                <span className="font-bold text-slate-800">¿Eliminar esta aula?</span>
+                <span className="text-sm text-slate-600">Se borrarán sus horarios asignados. Esta acción no se puede deshacer.</span>
+                <div className="flex gap-2 justify-end mt-2">
+                    <button
+                        className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-sm font-medium transition-colors"
+                        onClick={() => toast.dismiss(t.id)}
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm font-medium transition-colors shadow-sm"
+                        onClick={() => {
+                            dispatch({ type: 'DELETE_CLASSROOM', payload: id });
+                            toast.dismiss(t.id);
+                            toast.success('Aula eliminada y horarios liberados.');
+                        }}
+                    >
+                        Sí, eliminar
+                    </button>
+                </div>
+            </div>
+        ), { duration: 5000 });
     };
 
     const getClassroomIcon = (type: ClassroomType) => {

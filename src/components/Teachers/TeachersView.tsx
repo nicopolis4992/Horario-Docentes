@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { generateTimeSlots } from '../../../utils';
 import Modal from '../Common/Modal';
+import toast from 'react-hot-toast';
 
 const TeachersView = () => {
     const { state, dispatch } = useAppStore();
@@ -88,9 +89,30 @@ const TeachersView = () => {
     };
 
     const handleDelete = (id: string) => {
-        if (confirm('¿Estás seguro de eliminar este docente? Se borrarán sus asignaciones.')) {
-            dispatch({ type: 'DELETE_TEACHER', payload: id });
-        }
+        toast((t) => (
+            <div className="flex flex-col gap-3">
+                <span className="font-bold text-slate-800">¿Eliminar este docente?</span>
+                <span className="text-sm text-slate-600">Se borrarán sus asignaciones. Esta acción no se puede deshacer.</span>
+                <div className="flex gap-2 justify-end mt-2">
+                    <button
+                        className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-sm font-medium transition-colors"
+                        onClick={() => toast.dismiss(t.id)}
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm font-medium transition-colors shadow-sm"
+                        onClick={() => {
+                            dispatch({ type: 'DELETE_TEACHER', payload: id });
+                            toast.dismiss(t.id);
+                            toast.success('Docente eliminado y horarios liberados.');
+                        }}
+                    >
+                        Sí, eliminar
+                    </button>
+                </div>
+            </div>
+        ), { duration: 5000 });
     };
 
     // Matrix Logic

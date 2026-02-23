@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useAppStore } from '../../../store';
+import { toast } from 'react-hot-toast';
 import {
     DayOfWeek,
     TimeSlot,
@@ -205,10 +206,12 @@ export const useScheduleLogic = () => {
                     });
                 }
             });
+            toast.success('Horario actualizado');
         } else if (assignMode === 'group' && selectedGroupId) {
             const session = pendingSessions.find(s => s.id === selectedGroupId) || allPendingSessions.find(s => s.id === selectedGroupId);
             if (session) {
                 assignSessionToCell(session, selectedCell.day, selectedCell.slot.id, formTeacherId, formClassroomId);
+                toast.success('Sesión asignada correctamente');
             }
         } else {
             // Manual single slot
@@ -224,6 +227,7 @@ export const useScheduleLogic = () => {
                     courseGroupId: undefined
                 }
             });
+            toast.success('Clase manual asignada');
         }
         closeModal();
     };
@@ -336,11 +340,12 @@ export const useScheduleLogic = () => {
 
             const validation = validateMove(dropDay, dropSlotId, session.hours, teacherId, classroomId, session.subjectId);
             if (!validation.valid) {
-                alert(`No se puede asignar: ${validation.error}`);
+                toast.error(`No se puede asignar: ${validation.error}`);
                 return;
             }
 
             assignSessionToCell(session, dropDay, dropSlotId, teacherId, classroomId);
+            toast.success(`Sesión de ${session.hours}h asignada correctamente`);
         } else if (active.data.current?.type === 'assignment') {
             const { span, assignmentIds } = active.data.current;
             const firstId = assignmentIds[0];
@@ -364,7 +369,7 @@ export const useScheduleLogic = () => {
             );
 
             if (!validation.valid) {
-                alert(`Movimiento inválido: ${validation.error}`);
+                toast.error(`Movimiento inválido: ${validation.error}`);
                 return;
             }
 
@@ -388,6 +393,7 @@ export const useScheduleLogic = () => {
                     }
                 });
             }
+            toast.success('Clase reubicada exitosamente');
         }
     };
 
@@ -507,6 +513,32 @@ export const useScheduleLogic = () => {
         }
     };
 
+    const handleClearTeacherSchedule = (teacherId: string) => {
+        if (!teacherId) return;
+        const assignmentsToClear = state.assignments.filter(a => a.teacherId === teacherId);
+        if (assignmentsToClear.length === 0) {
+            toast.error('Este docente no tiene asignaciones para borrar.');
+            return;
+        }
+        dispatch({
+            type: 'DELETE_MULTIPLE_ASSIGNMENTS',
+            payload: assignmentsToClear.map(a => a.id)
+        });
+        toast.success(`Horario liberado (${assignmentsToClear.length} horas removidas).`);
+    };
+
+    const handleClearAllSchedules = () => {
+        if (state.assignments.length === 0) {
+            toast.error('No hay horarios agendados para borrar.');
+            return;
+        }
+        dispatch({
+            type: 'DELETE_MULTIPLE_ASSIGNMENTS',
+            payload: state.assignments.map(a => a.id)
+        });
+        toast.success('La grilla de horarios ha sido vaciada completamente.');
+    };
+
     return {
         // State
         state, dispatch, timeSlots,
@@ -528,9 +560,12 @@ export const useScheduleLogic = () => {
 
         // Handlers
         handleTabChange, openAssignmentModal, closeModal,
+        handleCellClick: openAssignmentModal, // Exported alias expected by ScheduleCell
         handleGroupSelect, handleSave,
         handleDragEnd, handleDragStart,
         handleDeleteAssignment, handleSplitAssignment,
-        handleAutoAssignAll, validateMove
+        handleAutoAssignAll, validateMove,
+        handleClearTeacherSchedule, handleClearAllSchedules
     };
 };
+

@@ -1,180 +1,193 @@
 import React from 'react';
-import {
-    Sparkles,
-    User,
-    MapPin,
-    Trash2
-} from 'lucide-react';
-import { CLASSROOM_CONFIG } from '../../../utils';
-import { Teacher, Classroom, DayOfWeek, TimeSlot, AppState } from '../../../types';
+import { CalendarDays, Filter, Users, School, Sparkles, CheckCircle2, Trash2 } from 'lucide-react';
+import { useScheduleContext } from './ScheduleContext';
+import toast from 'react-hot-toast';
 
-interface ScheduleHeaderProps {
-    viewMode: 'teachers' | 'classrooms';
-    selectedTeacherId: string | null;
-    selectedClassroomId: string | null;
-    teachers: Teacher[];
-    classrooms: Classroom[];
-    state: AppState;
-    dispatch: React.Dispatch<any>;
-    onTabChange: (mode: 'teachers' | 'classrooms') => void;
-    onSelectTeacher: (id: string) => void;
-    onSelectClassroom: (id: string) => void;
-    onAutoAssignAll: () => void;
-}
+const ScheduleHeader = () => {
+    const {
+        state,
+        viewMode,
+        handleTabChange,
+        selectedTeacherId,
+        setSelectedTeacherId,
+        selectedClassroomId,
+        setSelectedClassroomId,
+        handleAutoAssignAll,
+        allPendingSessions,
+        showAllPending,
+        setShowAllPending,
+        handleClearTeacherSchedule,
+        handleClearAllSchedules
+    } = useScheduleContext();
 
-const ScheduleHeader: React.FC<ScheduleHeaderProps> = ({
-    viewMode,
-    selectedTeacherId,
-    selectedClassroomId,
-    teachers,
-    classrooms,
-    state,
-    dispatch,
-    onTabChange,
-    onSelectTeacher,
-    onSelectClassroom,
-    onAutoAssignAll
-}) => {
-    return (
-        <>
-            {/* HEADER: Title + Tabs */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shrink-0">
-                <div>
-                    <h2 className="text-2xl font-bold text-slate-800">Planificador</h2>
-                    <p className="text-slate-500 text-sm">Organiza las clases de la semana.</p>
+    const getInitials = (name: string) => {
+        return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+    };
+
+    const confirmClearTeacher = () => {
+        if (!selectedTeacherId) return;
+        toast((t) => (
+            <div className="flex flex-col gap-3">
+                <span className="font-bold text-slate-800">¿Vaciar horario del docente?</span>
+                <span className="text-sm text-slate-600">Se eliminarán todas las clases asignadas a este profesor.</span>
+                <div className="flex gap-2 justify-end mt-2">
+                    <button onClick={() => toast.dismiss(t.id)} className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-md text-sm font-medium">Cancelar</button>
+                    <button onClick={() => { handleClearTeacherSchedule(selectedTeacherId); toast.dismiss(t.id); }} className="px-3 py-1.5 bg-red-600 text-white rounded-md text-sm font-medium">Sí, vaciar</button>
                 </div>
+            </div>
+        ), { duration: 5000 });
+    };
 
-                {/* TABS & ACTIONS */}
-                <div className="flex gap-2">
-                    <button
-                        onClick={onAutoAssignAll}
-                        className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-bold flex items-center gap-2 transition-all shadow-sm"
-                        title="Asignar automáticamente todos los paralelos pendientes"
-                    >
-                        <Sparkles size={18} />
-                        Asignar Todo
-                    </button>
-                    <button
-                        onClick={() => {
-                            if (confirm('¿Limpiar TODO el horario de la semana? Esta acción es irreversible.')) {
-                                dispatch({ type: 'CLEAR_ALL_ASSIGNMENTS' });
-                            }
-                        }}
-                        className="px-4 py-2 bg-white hover:bg-red-50 text-red-600 border border-red-200 rounded-lg text-sm font-bold flex items-center gap-2 transition-all shadow-sm"
-                        title="Borrar todas las asignaciones de la grilla"
-                    >
-                        <Trash2 size={18} />
-                        Limpiar Todo
-                    </button>
-                    <div className="flex bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
+    const confirmClearAll = () => {
+        toast((t) => (
+            <div className="flex flex-col gap-3">
+                <span className="font-bold text-slate-800">¿Vaciar TODOS los horarios?</span>
+                <span className="text-sm text-slate-600">Se eliminarán TODAS las clases de todos los docentes y aulas.</span>
+                <div className="flex gap-2 justify-end mt-2">
+                    <button onClick={() => toast.dismiss(t.id)} className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-md text-sm font-medium">Cancelar</button>
+                    <button onClick={() => { handleClearAllSchedules(); toast.dismiss(t.id); }} className="px-3 py-1.5 bg-red-600 text-white rounded-md text-sm font-medium">Sí, borrar todo</button>
+                </div>
+            </div>
+        ), { duration: 5000 });
+    };
+
+    return (
+        <div className="bg-white flex flex-col border-b border-slate-200">
+            {/* Top Bar */}
+            <div className="px-6 py-4 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
+                <div className="flex items-center gap-6 w-full xl:w-auto overflow-x-auto pb-2 xl:pb-0">
+                    <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2 shrink-0">
+                        <CalendarDays className="text-blue-600" />
+                        Planificador
+                    </h2>
+
+                    {/* View Tabs */}
+                    <div className="flex bg-slate-100 p-1 rounded-lg shrink-0">
                         <button
-                            onClick={() => onTabChange('teachers')}
-                            className={`px-4 py-2 rounded-md text-sm font-bold flex items-center gap-2 transition-all ${viewMode === 'teachers'
-                                ? 'bg-blue-50 text-blue-700 shadow-sm'
-                                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-                                }`}
+                            onClick={() => handleTabChange('teacher')}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-md font-medium text-sm transition-all ${viewMode === 'teacher' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
                         >
-                            <User size={18} />
-                            Docentes
+                            <Users size={16} />
+                            Vista Docentes
                         </button>
                         <button
-                            onClick={() => onTabChange('classrooms')}
-                            className={`px-4 py-2 rounded-md text-sm font-bold flex items-center gap-2 transition-all ${viewMode === 'classrooms'
-                                ? 'bg-indigo-50 text-indigo-700 shadow-sm'
-                                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-                                }`}
+                            onClick={() => handleTabChange('classroom')}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-md font-medium text-sm transition-all ${viewMode === 'classroom' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
                         >
-                            <MapPin size={18} />
-                            Aulas
+                            <School size={16} />
+                            Vista Aulas
                         </button>
                     </div>
                 </div>
-            </div>
 
-            {/* SELECTION BAR (Horizontal Scroll) */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 shrink-0">
-                <p className="text-xs font-bold text-slate-400 uppercase mb-3 ml-1">
-                    {viewMode === 'teachers' ? 'Selecciona un Docente' : 'Selecciona un Aula'}
-                </p>
+                {/* Filters & Actions */}
+                <div className="flex flex-wrap items-center gap-4 w-full xl:w-auto justify-start xl:justify-end">
 
-                <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-                    {viewMode === 'teachers' ? (
-                        teachers.length > 0 ? (
-                            teachers.map(t => (
-                                <button
-                                    key={t.id}
-                                    onClick={() => onSelectTeacher(t.id)}
-                                    className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all min-w-[160px] ${selectedTeacherId === t.id
-                                        ? 'bg-blue-600 border-blue-600 text-white shadow-md'
-                                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                                        }`}
-                                >
-                                    <div
-                                        className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${selectedTeacherId === t.id ? 'bg-white text-blue-600' : 'text-white'
-                                            }`}
-                                        style={{ backgroundColor: selectedTeacherId === t.id ? undefined : t.color }}
-                                    >
-                                        {t.name.charAt(0)}
-                                    </div>
-                                    <span className="text-sm font-medium truncate">{t.name}</span>
-                                </button>
-                            ))
-                        ) : (
-                            <div className="text-sm text-slate-400 italic px-2">No hay docentes registrados.</div>
-                        )
-                    ) : (
-                        classrooms.length > 0 ? (
-                            classrooms.map(c => {
-                                const config = CLASSROOM_CONFIG[c.type];
-                                return (
-                                    <button
-                                        key={c.id}
-                                        onClick={() => onSelectClassroom(c.id)}
-                                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all min-w-[140px] ${selectedClassroomId === c.id
-                                            ? 'bg-indigo-600 border-indigo-600 text-white shadow-md'
-                                            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                                            }`}
-                                    >
-                                        <div className={`w-2 h-2 rounded-full ${selectedClassroomId === c.id ? 'bg-white' : config.iconColor.replace('text', 'bg')}`}></div>
-                                        <div className="flex flex-col items-start">
-                                            <span className="text-sm font-bold leading-none">{c.name}</span>
-                                            <span className={`text-[10px] leading-none mt-1 ${selectedClassroomId === c.id ? 'text-indigo-200' : 'text-slate-400'}`}>{c.type}</span>
-                                        </div>
-                                    </button>
-                                );
-                            })
-                        ) : (
-                            <div className="text-sm text-slate-400 italic px-2">No hay aulas registradas.</div>
-                        )
+                    {/* Progress Indicator */}
+                    {viewMode === 'teacher' && (
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg shrink-0">
+                            <div className="text-xs font-medium text-slate-600">Por Asignar:</div>
+                            <div className={`text-sm font-bold ${allPendingSessions.length === 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                {allPendingSessions.length} hrs
+                            </div>
+                            {allPendingSessions.length === 0 && <CheckCircle2 size={16} className="text-emerald-500 ml-1" />}
+                        </div>
+                    )}
+
+                    {viewMode === 'teacher' && selectedTeacherId && (
+                        <div className="flex items-center gap-2 shrink-0">
+                            <button
+                                onClick={handleAutoAssignAll}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 hover:text-blue-800 rounded-lg text-sm font-bold transition-colors border border-blue-200"
+                                title="Auto-asignar horas"
+                            >
+                                <Sparkles size={16} />
+                                <span>Auto-Asignar</span>
+                            </button>
+                            <button
+                                onClick={confirmClearTeacher}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-sm font-bold transition-colors border border-red-100"
+                                title="Vaciar horario del docente"
+                            >
+                                <Trash2 size={16} />
+                                <span className="hidden sm:inline">Vaciar Docente</span>
+                            </button>
+                        </div>
+                    )}
+
+                    <button
+                        onClick={confirmClearAll}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg text-sm font-bold transition-colors"
+                        title="Borrar absolutamente todos los horarios"
+                    >
+                        <Trash2 size={16} />
+                        <span className="hidden sm:inline">Borrar Todo</span>
+                    </button>
+
+                    <div className="h-6 w-px bg-slate-300 hidden sm:block"></div>
+
+                    {/* Classroom Selector uses Select */}
+                    {viewMode === 'classroom' && (
+                        <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+                            <Filter size={18} className="text-slate-400" />
+                            <select
+                                className="bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none min-w-[200px] w-full sm:w-auto"
+                                value={selectedClassroomId || ''}
+                                onChange={(e) => setSelectedClassroomId(e.target.value)}
+                            >
+                                <option value="">Selecciona un aula...</option>
+                                {state.classrooms.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                            </select>
+
+                            <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer ml-3">
+                                <input
+                                    type="checkbox" checked={showAllPending} onChange={(e) => setShowAllPending(e.target.checked)}
+                                    className="rounded text-blue-600 focus:ring-blue-500"
+                                />
+                                <span>Ver todas las pendientes</span>
+                            </label>
+                        </div>
                     )}
                 </div>
-
-                {/* CONTEXT CLEAR BUTTON */}
-                {(selectedTeacherId || selectedClassroomId) && (
-                    <div className="mt-4 pt-4 border-t border-slate-100 flex justify-end">
-                        <button
-                            onClick={() => {
-                                if (viewMode === 'teachers' && selectedTeacherId) {
-                                    const t = state.teachers.find(x => x.id === selectedTeacherId);
-                                    if (confirm(`¿Borrar TODO el horario de ${t?.name}?`)) {
-                                        dispatch({ type: 'CLEAR_TEACHER_ASSIGNMENTS', payload: selectedTeacherId });
-                                    }
-                                } else if (viewMode === 'classrooms' && selectedClassroomId) {
-                                    const c = state.classrooms.find(x => x.id === selectedClassroomId);
-                                    if (confirm(`¿Borrar TODA la ocupación de ${c?.name}?`)) {
-                                        dispatch({ type: 'CLEAR_CLASSROOM_ASSIGNMENTS', payload: selectedClassroomId });
-                                    }
-                                }
-                            }}
-                            className="text-xs font-bold text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg border border-red-100 flex items-center gap-2 transition-colors"
-                        >
-                            <Trash2 size={14} />
-                            {viewMode === 'teachers' ? 'Limpiar Horario del Docente' : 'Limpiar Uso del Aula'}
-                        </button>
-                    </div>
-                )}
             </div>
-        </>
+
+            {/* Sub-header component for Teacher Initials Selection */}
+            {viewMode === 'teacher' && (
+                <div className="bg-slate-50 px-6 py-3 border-t border-slate-200 overflow-x-auto flex items-center gap-3 custom-scrollbar">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider shrink-0 mr-2">Docentes:</span>
+                    {state.teachers.map(teacher => {
+                        const isSelected = selectedTeacherId === teacher.id;
+                        // Find if this teacher has pending hours
+                        const hasPending = state.courseGroups.some(g => {
+                            if (g.teacherId !== teacher.id) return false;
+                            const assignedCount = state.assignments.filter(a => a.courseGroupId === g.id).length;
+                            return assignedCount < g.totalHours;
+                        });
+
+                        return (
+                            <button
+                                key={teacher.id}
+                                onClick={() => setSelectedTeacherId(teacher.id)}
+                                title={teacher.name}
+                                className={`relative w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 transition-all shadow-sm
+                                    ${isSelected ? 'ring-2 ring-offset-2 ring-blue-500 scale-110 z-10' : 'hover:scale-105 border border-slate-200'}
+                                `}
+                                style={{
+                                    backgroundColor: isSelected ? teacher.color : '#ffffff',
+                                    color: isSelected ? '#ffffff' : teacher.color,
+                                    borderColor: isSelected ? teacher.color : undefined
+                                }}
+                            >
+                                {getInitials(teacher.name)}
+                                {hasPending && !isSelected && (
+                                    <span className="absolute top-0 right-0 w-3 h-3 bg-amber-500 border-2 border-white rounded-full"></span>
+                                )}
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
     );
 };
 

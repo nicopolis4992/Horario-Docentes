@@ -1,14 +1,14 @@
 import React from 'react';
 import { DndContext, DragOverlay } from '@dnd-kit/core';
 import { DraggableSession } from './DndComponents';
-import { useScheduleLogic } from './useScheduleLogic';
+import { ScheduleProvider, useScheduleContext } from './ScheduleContext';
 import PendingSidebar from './PendingSidebar';
 import ScheduleHeader from './ScheduleHeader';
 import ScheduleGrid from './ScheduleGrid';
 import AssignmentModal from './AssignmentModal';
 
-const ScheduleView = () => {
-    const logic = useScheduleLogic();
+const ScheduleViewContent = () => {
+    const logic = useScheduleContext();
 
     return (
         <DndContext
@@ -17,7 +17,6 @@ const ScheduleView = () => {
             onDragEnd={logic.handleDragEnd}
         >
             <div className="flex h-full gap-4">
-
                 {/* LEFT SIDEBAR: PENDING GROUPS */}
                 <PendingSidebar
                     pendingSessions={logic.pendingSessions}
@@ -29,38 +28,10 @@ const ScheduleView = () => {
 
                 {/* MAIN CONTENT */}
                 <div className="flex-1 space-y-4 flex flex-col min-w-0">
-
-                    {/* HEADER: Title + Tabs + Selection */}
-                    <ScheduleHeader
-                        viewMode={logic.viewMode}
-                        selectedTeacherId={logic.selectedTeacherId}
-                        selectedClassroomId={logic.selectedClassroomId}
-                        teachers={logic.state.teachers}
-                        classrooms={logic.state.classrooms}
-                        state={logic.state}
-                        dispatch={logic.dispatch}
-                        onTabChange={logic.handleTabChange}
-                        onSelectTeacher={(id) => logic.setSelectedTeacherId(id)}
-                        onSelectClassroom={(id) => logic.setSelectedClassroomId(id)}
-                        onAutoAssignAll={logic.handleAutoAssignAll}
-                    />
-
-                    {/* SCHEDULE GRID */}
-                    <ScheduleGrid
-                        state={logic.state}
-                        timeSlots={logic.timeSlots}
-                        viewMode={logic.viewMode}
-                        selectedTeacherId={logic.selectedTeacherId}
-                        selectedClassroomId={logic.selectedClassroomId}
-                        dispatch={logic.dispatch}
-                        onCellClick={(day, slot) => logic.openAssignmentModal(day, slot)}
-                        onEditBlock={(day, slot, ids) => logic.openAssignmentModal(day, slot, ids)}
-                        onDeleteAssignment={logic.handleDeleteAssignment}
-                        onSplitAssignment={logic.handleSplitAssignment}
-                    />
-
-                    {/* ASSIGNMENT MODAL */}
+                    <ScheduleHeader />
+                    <ScheduleGrid />
                     <AssignmentModal
+                        // Modals todavia reciben Props por simplicidad, pero se pueden refactorizar luego.
                         isOpen={!!logic.selectedCell}
                         onClose={logic.closeModal}
                         selectedCell={logic.selectedCell}
@@ -107,6 +78,14 @@ const ScheduleView = () => {
                 ) : null}
             </DragOverlay>
         </DndContext>
+    );
+};
+
+const ScheduleView = () => {
+    return (
+        <ScheduleProvider>
+            <ScheduleViewContent />
+        </ScheduleProvider>
     );
 };
 

@@ -16,8 +16,9 @@ import {
     Settings,
     Check
 } from 'lucide-react';
-import { AREA_CONFIG, CLASSROOM_CONFIG } from '../../../utils';
+import { AREA_CONFIG, CLASSROOM_CONFIG, generateTimeSlots } from '../../../utils';
 import Modal from '../Common/Modal';
+import toast from 'react-hot-toast';
 
 // Extension for form state
 interface SubjectFormData extends Partial<Subject> {
@@ -94,9 +95,30 @@ const SubjectsView = () => {
     };
 
     const handleDelete = (id: string) => {
-        if (confirm('¿Eliminar materia? Se borrarán sus asignaciones.')) {
-            dispatch({ type: 'DELETE_SUBJECT', payload: id });
-        }
+        toast((t) => (
+            <div className="flex flex-col gap-3">
+                <span className="font-bold text-slate-800">¿Eliminar esta materia?</span>
+                <span className="text-sm text-slate-600">Se borrarán sus paralelos y asignaciones. Esta acción no se puede deshacer.</span>
+                <div className="flex gap-2 justify-end mt-2">
+                    <button
+                        className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-sm font-medium transition-colors"
+                        onClick={() => toast.dismiss(t.id)}
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm font-medium transition-colors shadow-sm"
+                        onClick={() => {
+                            dispatch({ type: 'DELETE_SUBJECT', payload: id });
+                            toast.dismiss(t.id);
+                            toast.success('Materia, paralelos y horarios eliminados.');
+                        }}
+                    >
+                        Sí, eliminar
+                    </button>
+                </div>
+            </div>
+        ), { duration: 5000 });
     };
 
     const getAreaIcon = (area: SubjectArea) => {

@@ -55,10 +55,11 @@ interface DroppableCellProps {
     day: string;
     slotId: string;
     isBlocked?: boolean;
+    isInvalid?: boolean;
     children?: React.ReactNode;
 }
 
-export const DroppableCell: React.FC<DroppableCellProps> = ({ id, day, slotId, isBlocked, children }) => {
+export const DroppableCell: React.FC<DroppableCellProps> = ({ id, day, slotId, isBlocked, isInvalid, children }) => {
     const { isOver, setNodeRef } = useDroppable({
         id,
         data: {
@@ -72,7 +73,11 @@ export const DroppableCell: React.FC<DroppableCellProps> = ({ id, day, slotId, i
     return (
         <div
             ref={setNodeRef}
-            className={`h-[120px] border-b border-slate-100 p-1 relative group transition-colors ${isBlocked ? 'bg-slate-100' : isOver ? 'bg-blue-50 ring-2 ring-inset ring-blue-200 z-20' : 'hover:bg-slate-50'}`}
+            className={`h-[120px] border-b border-slate-100 p-1 relative group transition-colors ${isBlocked ? 'bg-slate-100'
+                    : isOver && isInvalid ? 'bg-red-50 ring-2 ring-inset ring-red-400 z-20'
+                        : isOver ? 'bg-blue-50 ring-2 ring-inset ring-blue-200 z-20'
+                            : 'hover:bg-slate-50'
+                }`}
         >
             {children}
         </div>

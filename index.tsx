@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import { AppProvider } from './store';
 import {
   LayoutDashboard,
@@ -21,9 +23,11 @@ import SubjectsView from './src/components/Subjects/SubjectsView';
 import ClassroomsView from './src/components/Classrooms/ClassroomsView';
 import SidebarItem from './src/components/Layout/SidebarItem';
 
-const AppContent = () => {
-  const [activeTab, setActiveTab] = useState('dashboard');
+const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // Helper to close sidebar on mobile after clicking a link
+  const closeSidebar = () => setIsSidebarOpen(false);
 
   return (
     <div className="min-h-screen bg-slate-50 flex font-sans">
@@ -31,7 +35,7 @@ const AppContent = () => {
       {isSidebarOpen && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
-          onClick={() => setIsSidebarOpen(false)}
+          onClick={closeSidebar}
         />
       )}
 
@@ -47,7 +51,7 @@ const AppContent = () => {
               <span>UniScheduler</span>
             </h1>
             <button
-              onClick={() => setIsSidebarOpen(false)}
+              onClick={closeSidebar}
               className="lg:hidden text-slate-400 hover:text-slate-600"
             >
               <X size={24} />
@@ -61,20 +65,20 @@ const AppContent = () => {
             <SidebarItem
               icon={LayoutDashboard}
               label="Dashboard"
-              active={activeTab === 'dashboard'}
-              onClick={() => setActiveTab('dashboard')}
+              to="/dashboard"
+              onClick={closeSidebar}
             />
             <SidebarItem
               icon={ListTodo}
               label="Oferta Académica"
-              active={activeTab === 'offer_planning'}
-              onClick={() => setActiveTab('offer_planning')}
+              to="/offer-planning"
+              onClick={closeSidebar}
             />
             <SidebarItem
               icon={CalendarDays}
               label="Planificador"
-              active={activeTab === 'schedule'}
-              onClick={() => setActiveTab('schedule')}
+              to="/schedule"
+              onClick={closeSidebar}
             />
 
             <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 px-4 mt-6">
@@ -83,20 +87,20 @@ const AppContent = () => {
             <SidebarItem
               icon={Users}
               label="Docentes"
-              active={activeTab === 'teachers'}
-              onClick={() => setActiveTab('teachers')}
+              to="/teachers"
+              onClick={closeSidebar}
             />
             <SidebarItem
               icon={BookOpen}
               label="Materias"
-              active={activeTab === 'subjects'}
-              onClick={() => setActiveTab('subjects')}
+              to="/subjects"
+              onClick={closeSidebar}
             />
             <SidebarItem
               icon={School}
               label="Aulas"
-              active={activeTab === 'classrooms'}
-              onClick={() => setActiveTab('classrooms')}
+              to="/classrooms"
+              onClick={closeSidebar}
             />
           </nav>
 
@@ -130,13 +134,8 @@ const AppContent = () => {
 
         {/* Scrollable Area */}
         <div className="flex-1 overflow-auto p-4 lg:p-8">
-          <div className="max-w-[1600px] mx-auto h-full">
-            {activeTab === 'dashboard' && <DashboardView />}
-            {activeTab === 'offer_planning' && <OfferPlannerView />}
-            {activeTab === 'schedule' && <ScheduleView />}
-            {activeTab === 'teachers' && <TeachersView />}
-            {activeTab === 'subjects' && <SubjectsView />}
-            {activeTab === 'classrooms' && <ClassroomsView />}
+          <div className="max-w-[1600px] mx-auto h-full relative">
+            {children}
           </div>
         </div>
       </main>
@@ -147,7 +146,30 @@ const AppContent = () => {
 const App = () => {
   return (
     <AppProvider>
-      <AppContent />
+      <BrowserRouter>
+        <AppLayout>
+          <Routes>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<DashboardView />} />
+            <Route path="/offer-planning" element={<OfferPlannerView />} />
+            <Route path="/schedule" element={<ScheduleView />} />
+            <Route path="/teachers" element={<TeachersView />} />
+            <Route path="/subjects" element={<SubjectsView />} />
+            <Route path="/classrooms" element={<ClassroomsView />} />
+          </Routes>
+        </AppLayout>
+      </BrowserRouter>
+      {/* Global Notification System */}
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: '#fff',
+            color: '#1e293b',
+          }
+        }}
+      />
     </AppProvider>
   );
 };
