@@ -148,80 +148,113 @@ const SubjectsView = () => {
                 </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {state.subjects.map((subject) => {
-                    const config = AREA_CONFIG[subject.area] || AREA_CONFIG['Audiovisual'];
-                    const AreaIcon = getAreaIcon(subject.area);
-
-                    return (
-                        <div key={subject.id} className={`bg-white rounded-xl shadow-sm border ${config.border} p-5 hover:shadow-md transition-shadow relative group`}>
-                            <div className="absolute top-4 right-4 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button
-                                    onClick={() => handleOpenModal(subject)}
-                                    className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded"
-                                >
-                                    <Edit size={16} />
-                                </button>
-                                <button
-                                    onClick={() => handleDelete(subject.id)}
-                                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded"
-                                >
-                                    <Trash2 size={16} />
+            <div className="space-y-10">
+                {(() => {
+                    if (state.subjects.length === 0) {
+                        return (
+                            <div className="py-12 text-center text-slate-400 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
+                                <BookOpen size={48} className="mx-auto mb-4 opacity-50" />
+                                <p>No hay materias registradas.</p>
+                                <button onClick={() => handleOpenModal()} className="text-emerald-600 hover:underline mt-2">
+                                    Crear la primera
                                 </button>
                             </div>
+                        );
+                    }
 
-                            <div className="flex items-start space-x-4 mb-4">
-                                <div className={`w-10 h-10 rounded-lg ${config.bg} ${config.iconColor} flex items-center justify-center shrink-0`}>
-                                    <AreaIcon size={20} />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <h3 className="font-bold text-slate-800 line-clamp-2 leading-tight mb-1">{subject.name}</h3>
-                                    <div className={`text-[10px] uppercase font-bold tracking-wider ${config.iconColor}`}>
-                                        {subject.area}
-                                    </div>
-                                </div>
-                            </div>
+                    const grouped = new Map<number | 'none', typeof state.subjects>();
+                    state.subjects.forEach(s => {
+                        const key = s.semester ?? 'none';
+                        if (!grouped.has(key)) grouped.set(key, []);
+                        grouped.get(key)!.push(s);
+                    });
 
-                            {/* Preferred Days Display */}
-                            {subject.preferredDays && subject.preferredDays.length > 0 && (
-                                <div className="mb-4 flex flex-wrap gap-1">
-                                    {subject.preferredDays.map(day => (
-                                        <span key={day} className="text-[10px] bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded border border-emerald-100 font-medium">
-                                            {day.substring(0, 3)}
-                                        </span>
-                                    ))}
-                                </div>
-                            )}
+                    const sortedGroups = Array.from(grouped.entries()).sort((a, b) => {
+                        if (a[0] === 'none') return 1;
+                        if (b[0] === 'none') return -1;
+                        return (a[0] as number) - (b[0] as number);
+                    });
 
-                            <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-4">
-                                <div className="flex flex-col">
-                                    <span className="text-xs text-slate-500 uppercase font-semibold">Duración</span>
-                                    <div className="flex items-center space-x-1 text-slate-700 font-medium">
-                                        <Clock size={14} className="text-slate-400" />
-                                        <span>{subject.credits} horas</span>
-                                    </div>
-                                </div>
-                                <div className="flex flex-col">
-                                    <span className="text-xs text-slate-500 uppercase font-semibold">Proyección</span>
-                                    <div className="flex items-center space-x-1 text-slate-700 font-medium">
-                                        <Users size={14} className="text-slate-400" />
-                                        <span>{subject.projectedStudents} est.</span>
-                                    </div>
-                                </div>
+                    return sortedGroups.map(([semester, subjects]) => (
+                        <div key={semester} className="space-y-4">
+                            <h3 className="text-lg font-bold text-slate-800 border-b border-slate-200 pb-2">
+                                {semester === 'none' ? 'Sin Semestre Asignado' : `Semestre ${semester}`}
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {subjects.map((subject) => {
+                                    const config = AREA_CONFIG[subject.area] || AREA_CONFIG['Audiovisual'];
+                                    const AreaIcon = getAreaIcon(subject.area);
+
+                                    return (
+                                        <div key={subject.id} className={`bg-white rounded-xl shadow-sm border ${config.border} p-5 hover:shadow-md transition-shadow relative group`}>
+                                            <div className="absolute top-4 right-4 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button
+                                                    onClick={() => handleOpenModal(subject)}
+                                                    className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded"
+                                                >
+                                                    <Edit size={16} />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(subject.id)}
+                                                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+
+                                            <div className="flex items-start space-x-4 mb-4">
+                                                <div className={`w-10 h-10 rounded-lg ${config.bg} ${config.iconColor} flex items-center justify-center shrink-0`}>
+                                                    <AreaIcon size={20} />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <h3 className="font-bold text-slate-800 line-clamp-2 leading-tight mb-1">{subject.name}</h3>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className={`text-[10px] uppercase font-bold tracking-wider ${config.iconColor}`}>
+                                                            {subject.area}
+                                                        </div>
+                                                        {subject.semester && (
+                                                            <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-full font-bold">
+                                                                Sem {subject.semester}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Preferred Days Display */}
+                                            {subject.preferredDays && subject.preferredDays.length > 0 && (
+                                                <div className="mb-4 flex flex-wrap gap-1">
+                                                    {subject.preferredDays.map(day => (
+                                                        <span key={day} className="text-[10px] bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded border border-emerald-100 font-medium">
+                                                            {day.substring(0, 3)}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-4">
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs text-slate-500 uppercase font-semibold">Duración</span>
+                                                    <div className="flex items-center space-x-1 text-slate-700 font-medium">
+                                                        <Clock size={14} className="text-slate-400" />
+                                                        <span>{subject.credits} horas</span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs text-slate-500 uppercase font-semibold">Proyección</span>
+                                                    <div className="flex items-center space-x-1 text-slate-700 font-medium">
+                                                        <Users size={14} className="text-slate-400" />
+                                                        <span>{subject.projectedStudents} est.</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
-                    );
-                })}
-
-                {state.subjects.length === 0 && (
-                    <div className="col-span-full py-12 text-center text-slate-400 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
-                        <BookOpen size={48} className="mx-auto mb-4 opacity-50" />
-                        <p>No hay materias registradas.</p>
-                        <button onClick={() => handleOpenModal()} className="text-emerald-600 hover:underline mt-2">
-                            Crear la primera
-                        </button>
-                    </div>
-                )}
+                    ));
+                })()}
             </div>
 
             <Modal
@@ -230,17 +263,32 @@ const SubjectsView = () => {
                 title={editingSubject ? 'Editar Materia' : 'Nueva Materia'}
             >
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Nombre de la Materia</label>
-                        <input
-                            autoFocus
-                            type="text"
-                            required
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all text-slate-900 bg-white"
-                            value={formData.name || ''}
-                            onChange={e => setFormData({ ...formData, name: e.target.value })}
-                            placeholder="Ej. Edición de Video"
-                        />
+                    <div className="grid grid-cols-3 gap-4">
+                        <div className="col-span-2">
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Nombre de la Materia</label>
+                            <input
+                                autoFocus
+                                type="text"
+                                required
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all text-slate-900 bg-white"
+                                value={formData.name || ''}
+                                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                placeholder="Ej. Edición de Video"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Semestre</label>
+                            <select
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-slate-900 bg-white"
+                                value={formData.semester || ''}
+                                onChange={e => setFormData({ ...formData, semester: e.target.value ? parseInt(e.target.value) : undefined })}
+                            >
+                                <option value="">Sin semestre</option>
+                                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(s => (
+                                    <option key={s} value={s}>Semestre {s}</option>
+                                ))}
+                            </select>
+                        </div>
                     </div>
 
                     <div>

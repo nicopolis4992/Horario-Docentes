@@ -97,7 +97,7 @@ export const useOfferPlanner = () => {
             newGroups.push({
                 id: crypto.randomUUID(),
                 subjectId: selectedSubject.id,
-                name: `Paralelo ${String.fromCharCode(65 + i)}`,
+                name: `Paralelo ${i + 1}`,
                 studentCount: count,
                 totalHours: selectedSubject.credits,
                 plannedClassroomId: assignedRoom.id,
@@ -187,7 +187,7 @@ export const useOfferPlanner = () => {
                 allNewGroups.push({
                     id: crypto.randomUUID(),
                     subjectId: subject.id,
-                    name: `Paralelo ${String.fromCharCode(65 + i)}`,
+                    name: `Paralelo ${i + 1}`,
                     studentCount: count,
                     totalHours: subject.credits,
                     plannedClassroomId: assignedRoom.id,

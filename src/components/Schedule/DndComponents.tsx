@@ -73,10 +73,10 @@ export const DroppableCell: React.FC<DroppableCellProps> = ({ id, day, slotId, i
     return (
         <div
             ref={setNodeRef}
-            className={`h-[120px] border-b border-slate-100 p-1 relative group transition-colors ${isBlocked ? 'bg-slate-100'
-                    : isOver && isInvalid ? 'bg-red-50 ring-2 ring-inset ring-red-400 z-20'
-                        : isOver ? 'bg-blue-50 ring-2 ring-inset ring-blue-200 z-20'
-                            : 'hover:bg-slate-50'
+            className={`h-[80px] border-b border-slate-100 p-1 relative group transition-colors ${isBlocked ? 'bg-slate-100'
+                : isOver && isInvalid ? 'bg-red-50 ring-2 ring-inset ring-red-400 z-20'
+                    : isOver ? 'bg-blue-50 ring-2 ring-inset ring-blue-200 z-20'
+                        : 'hover:bg-slate-50'
                 }`}
         >
             {children}
@@ -115,14 +115,15 @@ export const DraggableAssignmentBlock: React.FC<DraggableAssignmentBlockProps> =
             ref={setNodeRef}
             style={{
                 ...dragStyle,
-                height: `100%`,
-                position: 'relative' // Changed to relative so the internal layout works
+                height: `100%`
             }}
             {...listeners}
             {...attributes}
-            className={`w-full p-1 z-10 transition-all cursor-grab active:cursor-grabbing ${isDragging ? 'opacity-30' : ''}`}
+            className={`w-full p-1 z-10 transition-all cursor-grab active:cursor-grabbing relative ${isDragging ? 'opacity-30' : ''}`}
         >
-            {children}
+            <div className="relative z-10 h-full">
+                {children}
+            </div>
         </div>
     );
 };

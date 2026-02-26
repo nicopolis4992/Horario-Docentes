@@ -25,7 +25,6 @@ const TeachersView = () => {
     // Form State
     const [formData, setFormData] = useState<Partial<Teacher>>({
         name: '',
-        email: '',
         maxHours: 21,
         color: '#3B82F6',
         unavailableSlots: [],
@@ -56,7 +55,6 @@ const TeachersView = () => {
             setEditingTeacher(null);
             setFormData({
                 name: '',
-                email: '',
                 maxHours: 21,
                 color: colors[Math.floor(Math.random() * colors.length)],
                 unavailableSlots: [],
@@ -193,10 +191,6 @@ const TeachersView = () => {
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <h3 className="font-bold text-slate-800 truncate">{teacher.name}</h3>
-                                    <div className="flex items-center text-slate-500 text-xs mt-1 space-x-2">
-                                        <Mail size={12} />
-                                        <span className="truncate">{teacher.email || 'Sin correo'}</span>
-                                    </div>
                                     {/* Specialty Badges */}
                                     <div className="mt-3 flex flex-wrap gap-1">
                                         {teacher.allowedSubjectIds?.map(sid => {
@@ -272,15 +266,6 @@ const TeachersView = () => {
                                             className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 bg-white"
                                             value={formData.name || ''}
                                             onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Correo Electrónico</label>
-                                        <input
-                                            type="email"
-                                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 bg-white"
-                                            value={formData.email || ''}
-                                            onChange={e => setFormData({ ...formData, email: e.target.value })}
                                         />
                                     </div>
                                 </div>

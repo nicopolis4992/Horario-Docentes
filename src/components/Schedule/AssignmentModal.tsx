@@ -25,7 +25,7 @@ interface AssignmentModalProps {
     editingAssignmentIds: string[] | null;
     pendingSessions: PendingSession[];
     state: AppState;
-    viewMode: 'teachers' | 'classrooms';
+    viewMode: 'teacher' | 'classroom';
     selectedTeacherId: string | null;
     selectedClassroomId: string | null;
     onAssignModeChange: (mode: 'group' | 'manual') => void;
@@ -143,7 +143,7 @@ const AssignmentModal: React.FC<AssignmentModalProps> = ({
                 {formSubjectId && (formTeacherId || selectedTeacherId) && (
                     <div className="space-y-2">
                         {(() => {
-                            const teacherId = viewMode === 'teachers' ? selectedTeacherId : formTeacherId;
+                            const teacherId = viewMode === 'teacher' ? selectedTeacherId : formTeacherId;
                             const teacher = state.teachers.find(t => t.id === teacherId);
                             const subject = state.subjects.find(s => s.id === formSubjectId);
 
@@ -209,7 +209,7 @@ const AssignmentModal: React.FC<AssignmentModalProps> = ({
                 {/* Teacher Select */}
                 <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Docente</label>
-                    {viewMode === 'teachers' && selectedTeacherId ? (
+                    {viewMode === 'teacher' && selectedTeacherId ? (
                         <div className="w-full px-3 py-2 border border-slate-200 bg-slate-50 rounded-lg text-slate-500 flex items-center justify-between">
                             <span>{state.teachers.find(t => t.id === selectedTeacherId)?.name}</span>
                             <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Fijo</span>
@@ -252,7 +252,7 @@ const AssignmentModal: React.FC<AssignmentModalProps> = ({
                 {/* Room Select */}
                 <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Aula</label>
-                    {viewMode === 'classrooms' && selectedClassroomId ? (
+                    {viewMode === 'classroom' && selectedClassroomId ? (
                         <div className="w-full px-3 py-2 border border-slate-200 bg-slate-50 rounded-lg text-slate-500 flex items-center justify-between">
                             <span>{state.classrooms.find(c => c.id === selectedClassroomId)?.name}</span>
                             <span className="text-xs font-bold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded">Fija</span>

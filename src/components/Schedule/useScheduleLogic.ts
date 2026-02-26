@@ -19,13 +19,14 @@ export interface PendingSession {
 }
 
 export const DAYS: DayOfWeek[] = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+export const WEEKDAYS: DayOfWeek[] = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
 
 export const useScheduleLogic = () => {
     const { state, dispatch } = useAppStore();
     const timeSlots = generateTimeSlots();
 
     // View Mode: 'teachers' or 'classrooms'
-    const [viewMode, setViewMode] = useState<'teachers' | 'classrooms'>('teachers');
+    const [viewMode, setViewMode] = useState<'teacher' | 'classroom'>('teacher');
 
     // Selection State
     const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null);
@@ -47,6 +48,9 @@ export const useScheduleLogic = () => {
 
     // Toggle for showing ALL pending sessions in Aulas mode
     const [showAllPending, setShowAllPending] = useState(false);
+
+    // Sidebar visibility
+    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
     // --- Pending Sessions (ALL, unfiltered) ---
     const allPendingSessions = useMemo(() => {
@@ -92,22 +96,21 @@ export const useScheduleLogic = () => {
     const pendingSessions = useMemo(() => {
         let filtered = allPendingSessions;
 
-        if (viewMode === 'teachers' && selectedTeacherId) {
+        if (showAllPending) {
+            // Si el toggle "Ver Todos" está activo, devolvemos todo sin importar el recurso seleccionado
+            return filtered;
+        }
+
+        if (viewMode === 'teacher' && selectedTeacherId) {
             filtered = filtered.filter(s => {
                 const group = state.courseGroups.find(g => g.id === s.groupId);
                 return group?.teacherId === selectedTeacherId;
             });
-        } else if (viewMode === 'classrooms' && selectedClassroomId) {
-            if (showAllPending) {
-                // Show ALL pending sessions (toggle is active)
-                // Already unfiltered
-            } else {
-                // Show only sessions planned for this classroom
-                filtered = filtered.filter(s => {
-                    const group = state.courseGroups.find(g => g.id === s.groupId);
-                    return group?.plannedClassroomId === selectedClassroomId;
-                });
-            }
+        } else if (viewMode === 'classroom' && selectedClassroomId) {
+            filtered = filtered.filter(s => {
+                const group = state.courseGroups.find(g => g.id === s.groupId);
+                return group?.plannedClassroomId === selectedClassroomId;
+            });
         } else {
             filtered = [];
         }
@@ -124,7 +127,7 @@ export const useScheduleLogic = () => {
         [state.assignments, activeId]);
 
     // Handle Tab Change
-    const handleTabChange = (mode: 'teachers' | 'classrooms') => {
+    const handleTabChange = (mode: 'teacher' | 'classroom') => {
         setViewMode(mode);
     };
 
@@ -145,10 +148,10 @@ export const useScheduleLogic = () => {
             setFormClassroomId(assignment.classroomId);
         } else {
             // Auto-fill context for NEW assignment
-            if (viewMode === 'teachers' && selectedTeacherId) {
+            if (viewMode === 'teacher' && selectedTeacherId) {
                 setFormTeacherId(selectedTeacherId);
                 setFormClassroomId('');
-            } else if (viewMode === 'classrooms' && selectedClassroomId) {
+            } else if (viewMode === 'classroom' && selectedClassroomId) {
                 setFormClassroomId(selectedClassroomId);
                 setFormTeacherId('');
             } else {
@@ -320,10 +323,10 @@ export const useScheduleLogic = () => {
             const session = active.data.current.session;
             const group = state.courseGroups.find(g => g.id === session.groupId);
 
-            let teacherId = group?.teacherId || (viewMode === 'teachers' ? selectedTeacherId || '' : '');
+            let teacherId = group?.teacherId || (viewMode === 'teacher' ? selectedTeacherId || '' : '');
             // In classrooms mode, ALWAYS use the selected classroom (the one being viewed)
             // This enables cross-classroom reassignment via drag & drop
-            let classroomId = viewMode === 'classrooms' && selectedClassroomId
+            let classroomId = viewMode === 'classroom' && selectedClassroomId
                 ? selectedClassroomId
                 : (group?.plannedClassroomId || '');
 
@@ -354,7 +357,7 @@ export const useScheduleLogic = () => {
             if (!assignment) return;
 
             // In classrooms mode, use the currently selected classroom as target
-            const targetClassroomId = viewMode === 'classrooms' && selectedClassroomId
+            const targetClassroomId = viewMode === 'classroom' && selectedClassroomId
                 ? selectedClassroomId
                 : assignment.classroomId;
 
@@ -389,7 +392,8 @@ export const useScheduleLogic = () => {
                         id: crypto.randomUUID(),
                         day: dropDay,
                         timeSlotId: slot.id,
-                        classroomId: targetClassroomId
+                        classroomId: targetClassroomId,
+                        isSplit: undefined
                     }
                 });
             }
@@ -407,13 +411,27 @@ export const useScheduleLogic = () => {
     );
 
     const handleDeleteAssignment = (assignmentId: string, multipleIds?: string[]) => {
-        if (confirm('¿Eliminar esta hora de clase?')) {
-            if (multipleIds && multipleIds.length > 0) {
-                dispatch({ type: 'DELETE_MULTIPLE_ASSIGNMENTS', payload: multipleIds });
-            } else {
-                dispatch({ type: 'DELETE_ASSIGNMENT', payload: assignmentId });
-            }
-        }
+        toast((t) => React.createElement('div', { className: 'flex flex-col gap-3' },
+            React.createElement('span', { className: 'font-bold text-slate-800' }, '¿Eliminar esta hora de clase?'),
+            React.createElement('div', { className: 'flex gap-2 justify-end mt-2' },
+                React.createElement('button', {
+                    onClick: () => toast.dismiss(t.id),
+                    className: 'px-3 py-1.5 bg-slate-100 text-slate-700 rounded-md text-sm font-medium'
+                }, 'Cancelar'),
+                React.createElement('button', {
+                    onClick: () => {
+                        if (multipleIds && multipleIds.length > 0) {
+                            dispatch({ type: 'DELETE_MULTIPLE_ASSIGNMENTS', payload: multipleIds });
+                        } else {
+                            dispatch({ type: 'DELETE_ASSIGNMENT', payload: assignmentId });
+                        }
+                        toast.dismiss(t.id);
+                        toast.success('Clase eliminada');
+                    },
+                    className: 'px-3 py-1.5 bg-red-600 text-white rounded-md text-sm font-medium'
+                }, 'Sí, eliminar')
+            )
+        ), { duration: 5000 });
     };
 
     const handleSplitAssignment = (assignmentId: string) => {
@@ -423,6 +441,7 @@ export const useScheduleLogic = () => {
                 type: 'UPDATE_ASSIGNMENT',
                 payload: { ...assignment, isSplit: true }
             });
+            toast.success('Hora separada del bloque');
         }
     };
 
@@ -449,7 +468,7 @@ export const useScheduleLogic = () => {
             if (!teacherId) return;
 
             const teacher = state.teachers.find(t => t.id === teacherId);
-            const preferredDays = subject.preferredDays && subject.preferredDays.length > 0 ? subject.preferredDays : DAYS;
+            const preferredDays = subject.preferredDays && subject.preferredDays.length > 0 ? subject.preferredDays : WEEKDAYS;
 
             let assigned = false;
 
@@ -547,11 +566,13 @@ export const useScheduleLogic = () => {
         formSubjectId, formTeacherId, formClassroomId,
         editingAssignmentIds, activeId,
         showAllPending,
+        isSidebarOpen,
 
         // Setters
         setSelectedTeacherId, setSelectedClassroomId,
         setAssignMode, setFormSubjectId, setFormTeacherId, setFormClassroomId,
         setShowAllPending,
+        setIsSidebarOpen,
 
         // Computed
         pendingSessions, allPendingSessions,

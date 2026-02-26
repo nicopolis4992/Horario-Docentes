@@ -11,7 +11,6 @@ export interface Teacher {
   id: string;
   name: string;
   maxHours: number; // Changed from '15 | 21' to number to support custom hours
-  email?: string;
   color: string; // Hex color for calendar visualization
   unavailableSlots: string[]; // Array of strings formatted as "Day-TimeSlotId" (e.g., "Lunes-slot-0") representing blocked times
   allowedSubjectIds?: string[]; // Teacher specialties (ids of Subjects they can teach)
@@ -32,6 +31,7 @@ export type SubjectArea = 'Audiovisual' | 'Animación' | 'Interactividad';
 export interface Subject {
   id: string;
   name: string;
+  semester?: number; // 1-10, ej: 1 = primer semestre
   credits: number; // Hours per week implies blocks
   projectedStudents: number;
   area: SubjectArea; // New field for the degree axis

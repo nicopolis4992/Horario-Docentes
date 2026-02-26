@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { DAYS } from './useScheduleLogic';
 import { useScheduleContext } from './ScheduleContext';
 import ScheduleCell from './ScheduleCell';
 import { DroppableCell, DraggableAssignmentBlock } from './DndComponents';
-import { Clock, Plus, Ban, Edit2, Trash2, Scissors } from 'lucide-react';
+import { Clock, Plus, Ban, Edit2, Trash2, Scissors, Link } from 'lucide-react';
 import { AREA_CONFIG } from '../../../utils';
+import toast from 'react-hot-toast';
 
 const ScheduleGrid = () => {
     const {
@@ -12,6 +13,7 @@ const ScheduleGrid = () => {
         selectedTeacherId,
         selectedClassroomId,
         state,
+        dispatch,
         timeSlots,
         activeId,
         editingAssignmentIds,
@@ -19,6 +21,8 @@ const ScheduleGrid = () => {
         handleSplitAssignment,
         openAssignmentModal
     } = useScheduleContext();
+
+    const [activeSplitMenuId, setActiveSplitMenuId] = useState<string | null>(null);
 
     if (viewMode === 'teacher' && !selectedTeacherId) {
         return (
@@ -55,7 +59,7 @@ const ScheduleGrid = () => {
                         {/* TIME LABELS COLUMN */}
                         <div className="bg-slate-50 border-r border-slate-200 flex flex-col">
                             {timeSlots.map(slot => (
-                                <div key={slot.id} className="h-[120px] border-b border-slate-100 text-[10px] font-mono text-slate-500 flex flex-col items-center justify-center text-center p-2 shrink-0">
+                                <div key={slot.id} className="h-[80px] border-b border-slate-100 text-[10px] font-mono text-slate-500 flex flex-col items-center justify-center text-center p-2 shrink-0">
                                     <span>{slot.start}</span>
                                     <span className="w-8 h-px bg-slate-200 my-1"></span>
                                     <span>{slot.end}</span>
@@ -106,7 +110,7 @@ const ScheduleGrid = () => {
                                         const isBlocked = viewMode === 'teacher' && blockedSlots.includes(`${day}-${slot.id}`);
 
                                         return (
-                                            <div key={slot.id} className="h-[120px] border-b border-slate-100 p-1">
+                                            <div key={slot.id} className="h-[80px] border-b border-slate-100 p-1">
                                                 <ScheduleCell
                                                     id={cellId}
                                                     assignments={[]} /* Visual blocks are overlaid below */
@@ -136,8 +140,8 @@ const ScheduleGrid = () => {
                                                 key={`block-${assignment.id}`}
                                                 className="absolute left-0 right-0 z-10"
                                                 style={{
-                                                    top: `${slotIndex * 120}px`,
-                                                    height: `${span * 120}px`,
+                                                    top: `${slotIndex * 80}px`,
+                                                    height: `${span * 80}px`,
                                                     padding: '2px'
                                                 }}
                                             >
@@ -148,9 +152,9 @@ const ScheduleGrid = () => {
                                                     span={span}
                                                     assignmentIds={block.ids}
                                                 >
-                                                    <div className={`w-full h-full rounded p-2 ${areaConfig?.bg} ${areaConfig?.border} border flex flex-col justify-between shadow-md group pointer-events-auto overflow-hidden text-left relative`}>
+                                                    <div className={`w-full h-full rounded p-2 ${areaConfig?.bg} ${areaConfig?.border} border flex flex-col justify-between shadow-md group pointer-events-auto text-left relative`}>
 
-                                                        <div className="relative">
+                                                        <div className="relative pointer-events-auto">
                                                             <div className={`text-[9px] font-extrabold uppercase tracking-wider mb-0.5 ${areaConfig?.iconColor}`}>
                                                                 {viewMode === 'teacher' ? room?.name : teacher?.name}
                                                             </div>
@@ -161,28 +165,82 @@ const ScheduleGrid = () => {
                                                         </div>
 
                                                         <div className="flex items-center justify-between mt-auto">
-                                                            <div className="flex items-center gap-1 text-[10px] font-bold text-slate-500">
-                                                                <Clock size={10} className="text-slate-400" />
-                                                                <span>{span}h</span>
-                                                            </div>
+                                                            {span > 1 && (
+                                                                <div className="flex items-center gap-1 text-[10px] font-bold text-slate-500">
+                                                                    <Clock size={10} className="text-slate-400" />
+                                                                    <span>{span}h</span>
+                                                                </div>
+                                                            )}
                                                         </div>
 
                                                         {/* Hover Actions */}
-                                                        <div className="absolute top-1 right-1 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 backdrop-blur-sm rounded p-0.5 shadow-sm border border-slate-200">
+                                                        <div
+                                                            onPointerDownCapture={(e) => e.stopPropagation()}
+                                                            onMouseDown={(e) => e.stopPropagation()}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            className="absolute top-1 right-1 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 backdrop-blur-sm rounded p-0.5 shadow-sm border border-slate-200"
+                                                        >
+                                                            {assignment.isSplit && (
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.preventDefault(); e.stopPropagation();
+                                                                        dispatch({ type: 'JOIN_ASSIGNMENTS', payload: { courseGroupId: assignment.courseGroupId, day } });
+                                                                        toast.success('Bloques unidos');
+                                                                    }}
+                                                                    className="p-1 hover:bg-emerald-50 text-emerald-600 rounded transition-colors" title="Unir bloques separados">
+                                                                    <Link size={12} />
+                                                                </button>
+                                                            )}
                                                             <button
-                                                                onClick={(e) => { e.stopPropagation(); openAssignmentModal(day, timeSlots[slotIndex], block.ids); }}
+                                                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); openAssignmentModal(day, timeSlots[slotIndex], block.ids); }}
                                                                 className="p-1 hover:bg-blue-50 text-blue-600 rounded transition-colors" title="Editar aula/docente">
                                                                 <Edit2 size={12} />
                                                             </button>
                                                             {span > 1 && (
-                                                                <button
-                                                                    onClick={(e) => { e.stopPropagation(); handleSplitAssignment(assignment.id); }}
-                                                                    className="p-1 hover:bg-amber-50 text-amber-600 rounded transition-colors" title="Desvincular primera hora">
-                                                                    <Scissors size={12} />
-                                                                </button>
+                                                                <div className="relative">
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.preventDefault(); e.stopPropagation();
+                                                                            if (span === 2) {
+                                                                                handleSplitAssignment(block.ids[1]);
+                                                                            } else {
+                                                                                setActiveSplitMenuId(activeSplitMenuId === assignment.id ? null : assignment.id);
+                                                                            }
+                                                                        }}
+                                                                        className="p-1 hover:bg-amber-50 text-amber-600 rounded transition-colors" title="Dividir bloque">
+                                                                        <Scissors size={12} />
+                                                                    </button>
+
+                                                                    {activeSplitMenuId === assignment.id && span > 2 && (
+                                                                        <div className="absolute top-100 right-0 mt-1 bg-white border border-slate-200 shadow-xl rounded-md flex flex-col z-50 min-w-max">
+                                                                            {span === 3 && (
+                                                                                <button onClick={(e) => { e.stopPropagation(); handleSplitAssignment(block.ids[1]); setActiveSplitMenuId(null); }} className="px-3 py-1.5 text-xs font-medium text-left hover:bg-slate-50 border-b border-slate-100 last:border-0 whitespace-nowrap text-slate-700">1h + 2h</button>
+                                                                            )}
+                                                                            {span === 4 && (
+                                                                                <>
+                                                                                    <button onClick={(e) => { e.stopPropagation(); handleSplitAssignment(block.ids[1]); setActiveSplitMenuId(null); }} className="px-3 py-1.5 text-xs font-medium text-left hover:bg-slate-50 border-b border-slate-100 last:border-0 whitespace-nowrap text-slate-700">1h + 3h</button>
+                                                                                    <button onClick={(e) => { e.stopPropagation(); handleSplitAssignment(block.ids[2]); setActiveSplitMenuId(null); }} className="px-3 py-1.5 text-xs font-medium text-left hover:bg-slate-50 border-b border-slate-100 last:border-0 whitespace-nowrap text-slate-700">2h + 2h</button>
+                                                                                </>
+                                                                            )}
+                                                                            {span === 5 && (
+                                                                                <>
+                                                                                    <button onClick={(e) => { e.stopPropagation(); handleSplitAssignment(block.ids[1]); setActiveSplitMenuId(null); }} className="px-3 py-1.5 text-xs font-medium text-left hover:bg-slate-50 border-b border-slate-100 last:border-0 whitespace-nowrap text-slate-700">1h + 4h</button>
+                                                                                    <button onClick={(e) => { e.stopPropagation(); handleSplitAssignment(block.ids[2]); setActiveSplitMenuId(null); }} className="px-3 py-1.5 text-xs font-medium text-left hover:bg-slate-50 border-b border-slate-100 last:border-0 whitespace-nowrap text-slate-700">2h + 3h</button>
+                                                                                </>
+                                                                            )}
+                                                                            {span > 5 && (
+                                                                                Array.from({ length: Math.ceil((span - 1) / 2) }).map((_, i) => (
+                                                                                    <button key={i} onClick={(e) => { e.stopPropagation(); handleSplitAssignment(block.ids[i + 1]); setActiveSplitMenuId(null); }} className="px-3 py-1.5 text-xs font-medium text-left hover:bg-slate-50 border-b border-slate-100 last:border-0 whitespace-nowrap text-slate-700">
+                                                                                        {i + 1}h + {span - (i + 1)}h
+                                                                                    </button>
+                                                                                ))
+                                                                            )}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
                                                             )}
                                                             <button
-                                                                onClick={(e) => { e.stopPropagation(); handleDeleteAssignment(assignment.id, block.ids); }}
+                                                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteAssignment(assignment.id, block.ids); }}
                                                                 className="p-1 hover:bg-red-50 text-red-600 rounded transition-colors" title="Eliminar bloque completo">
                                                                 <Trash2 size={12} />
                                                             </button>

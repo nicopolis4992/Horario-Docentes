@@ -11,7 +11,7 @@ interface ScheduleCellProps {
     timeSlot: TimeSlot;
     assignments: ScheduleAssignment[];
     resourceId: string;
-    viewMode: 'teachers' | 'classrooms';
+    viewMode: 'teacher' | 'classroom';
     isDraggingOver: boolean;
     activeId: string | null;
     isEditing: boolean;
@@ -31,7 +31,7 @@ const ScheduleCell = ({
     const { state, dispatch, handleCellClick, activeSession, activeAssignment, validateMove, selectedTeacherId, selectedClassroomId } = useScheduleContext();
 
     let isBlocked = false;
-    if (viewMode === 'teachers') {
+    if (viewMode === 'teacher') {
         const teacher = state.teachers.find(t => t.id === resourceId);
         isBlocked = teacher?.unavailableSlots.includes(`${day}-${timeSlot.id}`) || false;
     }
@@ -42,8 +42,8 @@ const ScheduleCell = ({
         if (activeSession) {
             const group = state.courseGroups.find(g => g.id === activeSession.groupId);
 
-            let teacherId = group?.teacherId || (viewMode === 'teachers' ? selectedTeacherId || '' : '');
-            let classroomId = viewMode === 'classrooms' && selectedClassroomId
+            let teacherId = group?.teacherId || (viewMode === 'teacher' ? selectedTeacherId || '' : '');
+            let classroomId = viewMode === 'classroom' && selectedClassroomId
                 ? selectedClassroomId
                 : (group?.plannedClassroomId || '');
 
@@ -59,7 +59,7 @@ const ScheduleCell = ({
             // Calculamos el span:
             const span = state.assignments.filter(a => a.courseGroupId === activeAssignment.courseGroupId && a.day === activeAssignment.day && a.timeSlotId >= activeAssignment.timeSlotId && !a.isSplit).length || 1;
 
-            const targetClassroomId = viewMode === 'classrooms' && selectedClassroomId
+            const targetClassroomId = viewMode === 'classroom' && selectedClassroomId
                 ? selectedClassroomId
                 : activeAssignment.classroomId;
 

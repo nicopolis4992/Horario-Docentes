@@ -12,6 +12,8 @@ import {
   Menu,
   X,
   ListTodo,
+  Upload,
+  Download
 } from 'lucide-react';
 
 // Modular Components
@@ -22,6 +24,8 @@ import TeachersView from './src/components/Teachers/TeachersView';
 import SubjectsView from './src/components/Subjects/SubjectsView';
 import ClassroomsView from './src/components/Classrooms/ClassroomsView';
 import SidebarItem from './src/components/Layout/SidebarItem';
+import ImportDataView from './src/components/ImportExport/ImportDataView';
+import ExportView from './src/components/ImportExport/ExportView';
 
 const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -102,6 +106,18 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
               to="/classrooms"
               onClick={closeSidebar}
             />
+            <SidebarItem
+              icon={Upload}
+              label="Importar Datos"
+              to="/import"
+              onClick={closeSidebar}
+            />
+            <SidebarItem
+              icon={Download}
+              label="Exportar Datos"
+              to="/export"
+              onClick={closeSidebar}
+            />
           </nav>
 
           <div className="p-4 border-t border-slate-100">
@@ -156,6 +172,8 @@ const App = () => {
             <Route path="/teachers" element={<TeachersView />} />
             <Route path="/subjects" element={<SubjectsView />} />
             <Route path="/classrooms" element={<ClassroomsView />} />
+            <Route path="/import" element={<ImportDataView />} />
+            <Route path="/export" element={<ExportView />} />
           </Routes>
         </AppLayout>
       </BrowserRouter>

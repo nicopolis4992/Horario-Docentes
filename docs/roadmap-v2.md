@@ -40,7 +40,8 @@
 ## 3. Fases Evolutivas Actualizadas
 
 ### Fase 4: Refinamiento de UX (Inmediato)
-- [ ] **Drag & Drop:** Implementar `dnd-kit` para mover grupos a la grilla.
+- [x] **Drag & Drop:** Implementar `dnd-kit` para mover grupos a la grilla, incluyendo arrastre de bloques existentes.
+- [x] **Estabilización UI:** Refactorización del Header del planificador y filtrado dinámico del Sidebar de Pendientes.
 - [ ] **Reportes:** Exportación CSV/PDF para secretaría académica.
 
 ### Fase 5: Inteligencia Académica (MVP++)

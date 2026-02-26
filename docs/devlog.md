@@ -96,3 +96,21 @@ Necesidad de instanciar materias abstractas en grupos concretos ("Paralelos") an
 4.  **Optimización de Carga Docente:**
     *   Visualización de carga actual en tiempo real en los selectores de la oferta académica.
     *   Alertas de sobrecarga horaria.
+
+---
+
+## Fase 6: Estabilización de UI y Experiencia de Usuario (Planificador)
+**Estado:** ✅ Completado
+**Fecha:** 2026-02-24
+
+### Hitos Alcanzados:
+1.  **Resolución de Bugs Críticos:**
+    *   Solucionado el mismatch de estados (`viewMode` plural vs singular) que causaba que el sidebar de pendientes no filtrara correctamente por docente/aula.
+2.  **Refactorización de Layout (ScheduleHeader):**
+    *   Barra superior estática y diseño unificado que previene saltos visuales al cambiar de pestañas.
+    *   Reubicación estratégica de acciones secundarias ("Vaciar Docente" movido a la sub-barra de selección de iniciales).
+    *   Creación de sub-barra dedicada para el filtrado de Aulas.
+3.  **Estabilización de Drag & Drop (`dnd-kit`):**
+    *   Corrección de intersección de eventos (`pointer-events`) que impedía arrastrar y reubicar bloques de clases ya existentes en la cuadrícula.
+4.  **Auto-Asignación Inteligente:**
+    *   Restricción de la función "Auto-Asignar" para operar exclusivamente de Lunes a Viernes por defecto (omitiendo sábados a menos que la materia indique lo contrario en sus días preferidos).

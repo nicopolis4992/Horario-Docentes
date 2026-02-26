@@ -24,6 +24,7 @@ const ScheduleViewContent = () => {
                     viewMode={logic.viewMode}
                     showAllPending={logic.showAllPending}
                     onToggleShowAll={logic.setShowAllPending}
+                    isSidebarOpen={logic.isSidebarOpen}
                 />
 
                 {/* MAIN CONTENT */}
