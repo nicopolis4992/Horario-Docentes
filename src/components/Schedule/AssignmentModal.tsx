@@ -64,32 +64,36 @@ const AssignmentModal: React.FC<AssignmentModalProps> = ({
             onClose={onClose}
             title="Asignar Materia"
         >
-            <div className="mb-4 text-sm text-slate-500 bg-slate-50 p-3 rounded-lg border border-slate-200 flex items-center gap-2">
-                <Clock size={16} />
-                <span>
-                    Horario: <strong>{selectedCell?.day}</strong> de <strong>{selectedCell?.slot.start}</strong> a <strong>{selectedCell?.slot.end}</strong>
-                </span>
-            </div>
+            {editingAssignmentIds && editingAssignmentIds.length > 0 ? null : (
+                <div className="mb-4 text-sm text-slate-500 bg-slate-50 p-3 rounded-lg border border-slate-200 flex items-center gap-2">
+                    <Clock size={16} />
+                    <span>
+                        Horario: <strong>{selectedCell?.day}</strong> de <strong>{selectedCell?.slot.start}</strong> a <strong>{selectedCell?.slot.end}</strong>
+                    </span>
+                </div>
+            )}
 
             {/* Strategy Switcher */}
-            <div className="flex bg-slate-100 p-1 rounded-lg mb-4">
-                <button
-                    type="button"
-                    onClick={() => onAssignModeChange('group')}
-                    className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${assignMode === 'group' ? 'bg-white shadow text-blue-700' : 'text-slate-500 hover:text-slate-700'
-                        }`}
-                >
-                    Planificado (Recomendado)
-                </button>
-                <button
-                    type="button"
-                    onClick={() => onAssignModeChange('manual')}
-                    className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${assignMode === 'manual' ? 'bg-white shadow text-blue-700' : 'text-slate-500 hover:text-slate-700'
-                        }`}
-                >
-                    Manual / Ad-hoc
-                </button>
-            </div>
+            {(!editingAssignmentIds || editingAssignmentIds.length === 0) && (
+                <div className="flex bg-slate-100 p-1 rounded-lg mb-4">
+                    <button
+                        type="button"
+                        onClick={() => onAssignModeChange('group')}
+                        className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${assignMode === 'group' ? 'bg-white shadow text-blue-700' : 'text-slate-500 hover:text-slate-700'
+                            }`}
+                    >
+                        Planificado (Recomendado)
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => onAssignModeChange('manual')}
+                        className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${assignMode === 'manual' ? 'bg-white shadow text-blue-700' : 'text-slate-500 hover:text-slate-700'
+                            }`}
+                    >
+                        Manual / Ad-hoc
+                    </button>
+                </div>
+            )}
 
             {/* Conflict Warnings */}
             {selectedCell && formSubjectId && (
@@ -111,7 +115,7 @@ const AssignmentModal: React.FC<AssignmentModalProps> = ({
             <form onSubmit={onSave} className="space-y-4">
 
                 {/* GROUP SELECTION (If in Group Mode) */}
-                {assignMode === 'group' && (
+                {assignMode === 'group' && (!editingAssignmentIds || editingAssignmentIds.length === 0) && (
                     <div className="bg-blue-50 border border-blue-100 p-3 rounded-lg mb-2">
                         <label className="block text-xs font-bold text-blue-800 uppercase mb-1">Grupo Planificado</label>
                         <select
@@ -191,25 +195,31 @@ const AssignmentModal: React.FC<AssignmentModalProps> = ({
                 {/* Subject Select */}
                 <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Materia</label>
-                    <select
-                        className={`w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-slate-900 ${assignMode === 'group' ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : ''
-                            }`}
-                        value={formSubjectId}
-                        onChange={e => onSubjectChange(e.target.value)}
-                        required
-                        disabled={assignMode === 'group'}
-                    >
-                        <option value="">Selecciona una materia...</option>
-                        {state.subjects.map(s => (
-                            <option key={s.id} value={s.id}>{s.name} ({s.area})</option>
-                        ))}
-                    </select>
+                    {editingAssignmentIds && editingAssignmentIds.length > 0 ? (
+                        <div className="w-full px-3 py-2 border border-slate-200 bg-slate-50 rounded-lg text-slate-700 text-sm">
+                            {state.subjects.find(s => s.id === formSubjectId)?.name || 'Materia Desconocida'}
+                        </div>
+                    ) : (
+                        <select
+                            className={`w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-slate-900 ${assignMode === 'group' ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : ''
+                                }`}
+                            value={formSubjectId}
+                            onChange={e => onSubjectChange(e.target.value)}
+                            required
+                            disabled={assignMode === 'group'}
+                        >
+                            <option value="">Selecciona una materia...</option>
+                            {state.subjects.map(s => (
+                                <option key={s.id} value={s.id}>{s.name} ({s.area})</option>
+                            ))}
+                        </select>
+                    )}
                 </div>
 
                 {/* Teacher Select */}
                 <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Docente</label>
-                    {viewMode === 'teacher' && selectedTeacherId ? (
+                    {(!editingAssignmentIds || editingAssignmentIds.length === 0) && viewMode === 'teacher' && selectedTeacherId ? (
                         <div className="w-full px-3 py-2 border border-slate-200 bg-slate-50 rounded-lg text-slate-500 flex items-center justify-between">
                             <span>{state.teachers.find(t => t.id === selectedTeacherId)?.name}</span>
                             <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Fijo</span>
@@ -252,7 +262,7 @@ const AssignmentModal: React.FC<AssignmentModalProps> = ({
                 {/* Room Select */}
                 <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Aula</label>
-                    {viewMode === 'classroom' && selectedClassroomId ? (
+                    {(!editingAssignmentIds || editingAssignmentIds.length === 0) && viewMode === 'classroom' && selectedClassroomId ? (
                         <div className="w-full px-3 py-2 border border-slate-200 bg-slate-50 rounded-lg text-slate-500 flex items-center justify-between">
                             <span>{state.classrooms.find(c => c.id === selectedClassroomId)?.name}</span>
                             <span className="text-xs font-bold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded">Fija</span>

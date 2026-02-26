@@ -3,7 +3,7 @@ import { DAYS } from './useScheduleLogic';
 import { useScheduleContext } from './ScheduleContext';
 import ScheduleCell from './ScheduleCell';
 import { DroppableCell, DraggableAssignmentBlock } from './DndComponents';
-import { Clock, Plus, Ban, Edit2, Trash2, Scissors, Link } from 'lucide-react';
+import { Clock, Plus, Ban, Edit2, Trash2, Scissors, Link, AlertTriangle } from 'lucide-react';
 import { AREA_CONFIG } from '../../../utils';
 import toast from 'react-hot-toast';
 
@@ -83,6 +83,10 @@ const ScheduleGrid = () => {
                             // Calculate contiguous blocks for visual rendering
                             const blocks: any[] = [];
                             const sorted = [...dayAssignments].sort((a, b) => {
+                                // Primary sort: group by courseGroupId so contiguous merging works correctly
+                                const groupCompare = (a.courseGroupId || '').localeCompare(b.courseGroupId || '');
+                                if (groupCompare !== 0) return groupCompare;
+                                // Secondary sort: by time slot index within each group
                                 return timeSlots.findIndex(s => s.id === a.timeSlotId) - timeSlots.findIndex(s => s.id === b.timeSlotId);
                             });
 
@@ -135,14 +139,43 @@ const ScheduleGrid = () => {
                                         const group = state.courseGroups.find(g => g.id === assignment.courseGroupId);
                                         const areaConfig = subject ? AREA_CONFIG[subject.area] : AREA_CONFIG['Audiovisual'];
 
+                                        const isBlockIncomplete = block.ids.some(id => {
+                                            const a = state.assignments.find(x => x.id === id);
+                                            return a?.isIncomplete || !a?.teacherId || !a?.classroomId;
+                                        });
+
+                                        const bgClass = isBlockIncomplete ? 'bg-red-50' : areaConfig?.bg;
+                                        const borderClass = isBlockIncomplete ? 'border-red-400' : areaConfig?.border;
+                                        // Detect overlap: check if any other blocks occupy the same slots
+                                        const blockSlots = new Set<string>();
+                                        for (let s = slotIndex; s < slotIndex + span; s++) {
+                                            blockSlots.add(String(s));
+                                        }
+                                        const overlappingBlocks = blocks.filter(other => {
+                                            if (other === block) return false;
+                                            for (let s = other.slotIndex; s < other.slotIndex + other.span; s++) {
+                                                if (blockSlots.has(String(s))) return true;
+                                            }
+                                            return false;
+                                        });
+                                        const hasOverlap = overlappingBlocks.length > 0;
+                                        // Calculate horizontal position for stacking
+                                        const allOverlapping = hasOverlap ? [block, ...overlappingBlocks].sort((a, b) => a.assignment.id.localeCompare(b.assignment.id)) : [block];
+                                        const overlapIndex = allOverlapping.indexOf(block);
+                                        const overlapTotal = allOverlapping.length;
+
                                         return (
                                             <div
                                                 key={`block-${assignment.id}`}
-                                                className="absolute left-0 right-0 z-10"
+                                                className={`absolute z-10 ${hasOverlap ? '' : 'left-0 right-0'}`}
                                                 style={{
                                                     top: `${slotIndex * 80}px`,
                                                     height: `${span * 80}px`,
-                                                    padding: '2px'
+                                                    padding: '2px',
+                                                    ...(hasOverlap ? {
+                                                        left: `${(overlapIndex / overlapTotal) * 100}%`,
+                                                        width: `${(1 / overlapTotal) * 100}%`
+                                                    } : {})
                                                 }}
                                             >
                                                 <DraggableAssignmentBlock
@@ -152,7 +185,20 @@ const ScheduleGrid = () => {
                                                     span={span}
                                                     assignmentIds={block.ids}
                                                 >
-                                                    <div className={`w-full h-full rounded p-2 ${areaConfig?.bg} ${areaConfig?.border} border flex flex-col justify-between shadow-md group pointer-events-auto text-left relative`}>
+                                                    <div
+                                                        onClick={(e) => {
+                                                            if (isBlockIncomplete || hasOverlap) {
+                                                                e.stopPropagation();
+                                                                openAssignmentModal(day, timeSlots[slotIndex], block.ids);
+                                                            }
+                                                        }}
+                                                        className={`w-full h-full rounded p-2 ${bgClass} ${borderClass} border flex flex-col justify-between shadow-md group pointer-events-auto text-left relative ${isBlockIncomplete || hasOverlap ? 'cursor-pointer hover:ring-2 hover:ring-red-200' : ''}`}
+                                                    >
+                                                        {hasOverlap && (
+                                                            <div className="absolute -top-1 -right-1 z-30 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center" title="Conflicto: solapamiento de horario">
+                                                                <AlertTriangle size={10} />
+                                                            </div>
+                                                        )}
 
                                                         <div className="relative pointer-events-auto">
                                                             <div className={`text-[9px] font-extrabold uppercase tracking-wider mb-0.5 ${areaConfig?.iconColor}`}>

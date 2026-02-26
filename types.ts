@@ -71,6 +71,7 @@ export interface ScheduleAssignment {
   day: DayOfWeek;
   timeSlotId: string;
   isSplit?: boolean; // If true, this assignment will not be unified with the previous one visually
+  isIncomplete?: boolean; // If true, the assignment is missing a teacher or classroom
 }
 
 export interface AppState {

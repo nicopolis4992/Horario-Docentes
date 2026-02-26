@@ -64,7 +64,16 @@ const ActiveGroupsList = ({
                     return (
                         <div key={group.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 items-start md:items-center transition-all hover:border-slate-300">
                             <div className="min-w-[120px]">
-                                <h4 className="font-bold text-slate-800 text-lg">{group.name}</h4>
+                                <input
+                                    type="text"
+                                    value={group.name}
+                                    onChange={(e) => dispatch({
+                                        type: 'UPDATE_COURSE_GROUP',
+                                        payload: { ...group, name: e.target.value }
+                                    })}
+                                    className="font-bold text-slate-800 text-lg bg-transparent border-b border-transparent hover:border-slate-300 focus:border-blue-500 outline-none w-full transition-colors"
+                                    placeholder="Nombre del grupo"
+                                />
                                 <div className="flex items-center gap-1 text-sm text-slate-500 bg-slate-100 px-2 py-1 rounded w-fit mt-1">
                                     <Users size={14} />
                                     <input

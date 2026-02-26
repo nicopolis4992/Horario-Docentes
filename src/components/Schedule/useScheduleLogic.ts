@@ -196,15 +196,25 @@ export const useScheduleLogic = () => {
 
         if (editingAssignmentIds && editingAssignmentIds.length > 0) {
             // UPDATE MODE: Update teacher/classroom for existing slot(s)
+
+            const firstId = editingAssignmentIds[0];
+            const original = state.assignments.find(a => a.id === firstId);
+
+            if (original && original.courseGroupId && original.teacherId !== formTeacherId) {
+                // If teacher changed, update the ENTIRE group
+                handleReassignTeacher(original.courseGroupId, formTeacherId);
+            }
+
             editingAssignmentIds.forEach(id => {
-                const original = state.assignments.find(a => a.id === id);
-                if (original) {
+                const current = state.assignments.find(a => a.id === id);
+                if (current) {
                     dispatch({
                         type: 'UPDATE_ASSIGNMENT',
                         payload: {
-                            ...original,
+                            ...current,
                             teacherId: formTeacherId,
-                            classroomId: formClassroomId
+                            classroomId: formClassroomId,
+                            isIncomplete: !formTeacherId || !formClassroomId
                         }
                     });
                 }
@@ -235,7 +245,7 @@ export const useScheduleLogic = () => {
         closeModal();
     };
 
-    const assignSessionToCell = (session: PendingSession, day: DayOfWeek, slotId: string, teacherId: string, classroomId: string) => {
+    const assignSessionToCell = (session: PendingSession, day: DayOfWeek, slotId: string, teacherId: string, classroomId: string, isIncomplete: boolean = false) => {
         const hoursToAssign = session.hours;
         const currentSlotIndex = timeSlots.findIndex(s => s.id === slotId);
 
@@ -252,7 +262,8 @@ export const useScheduleLogic = () => {
                 subjectId: session.subjectId,
                 teacherId: teacherId,
                 classroomId: classroomId,
-                courseGroupId: session.groupId
+                courseGroupId: session.groupId,
+                isIncomplete: isIncomplete
             });
         }
 
@@ -330,25 +341,17 @@ export const useScheduleLogic = () => {
                 ? selectedClassroomId
                 : (group?.plannedClassroomId || '');
 
-            if (!teacherId || !classroomId) {
-                // If missing, open modal to complete data
-                setSelectedCell({ day: dropDay, slot: timeSlots.find(s => s.id === dropSlotId)! });
-                setSelectedGroupId(session.id);
-                setAssignMode('group');
-                setFormSubjectId(session.subjectId);
-                setFormTeacherId(teacherId);
-                setFormClassroomId(classroomId);
-                return;
-            }
-
             const validation = validateMove(dropDay, dropSlotId, session.hours, teacherId, classroomId, session.subjectId);
-            if (!validation.valid) {
-                toast.error(`No se puede asignar: ${validation.error}`);
-                return;
-            }
+            const isIncomplete = !teacherId || !classroomId || !validation.valid;
 
-            assignSessionToCell(session, dropDay, dropSlotId, teacherId, classroomId);
-            toast.success(`Sesión de ${session.hours}h asignada correctamente`);
+            assignSessionToCell(session, dropDay, dropSlotId, teacherId, classroomId, isIncomplete);
+            if (!validation.valid) {
+                toast(`⚠️ Asignada con conflicto: ${validation.error}`, { icon: '⚠️' });
+            } else if (!teacherId || !classroomId) {
+                toast(`Sesión asignada (incompleta — falta ${!teacherId ? 'docente' : 'aula'})`, { icon: '⚠️' });
+            } else {
+                toast.success(`Sesión de ${session.hours}h asignada correctamente`);
+            }
         } else if (active.data.current?.type === 'assignment') {
             const { span, assignmentIds } = active.data.current;
             const firstId = assignmentIds[0];
@@ -371,10 +374,7 @@ export const useScheduleLogic = () => {
                 assignmentIds
             );
 
-            if (!validation.valid) {
-                toast.error(`Movimiento inválido: ${validation.error}`);
-                return;
-            }
+            const isIncomplete = !validation.valid || !assignment.teacherId || !targetClassroomId;
 
             // Perform Move
             const currentSlotIndex = timeSlots.findIndex(s => s.id === dropSlotId);
@@ -393,11 +393,16 @@ export const useScheduleLogic = () => {
                         day: dropDay,
                         timeSlotId: slot.id,
                         classroomId: targetClassroomId,
-                        isSplit: undefined
+                        isSplit: undefined,
+                        isIncomplete
                     }
                 });
             }
-            toast.success('Clase reubicada exitosamente');
+            if (!validation.valid) {
+                toast(`⚠️ Reubicada con conflicto: ${validation.error}`, { icon: '⚠️' });
+            } else {
+                toast.success('Clase reubicada exitosamente');
+            }
         }
     };
 
@@ -546,6 +551,37 @@ export const useScheduleLogic = () => {
         toast.success(`Horario liberado (${assignmentsToClear.length} horas removidas).`);
     };
 
+    const handleReassignTeacher = (courseGroupId: string, newTeacherId: string) => {
+        const groupAssignments = state.assignments.filter(a => a.courseGroupId === courseGroupId);
+        groupAssignments.forEach(a => {
+            dispatch({
+                type: 'UPDATE_ASSIGNMENT',
+                payload: { ...a, teacherId: newTeacherId, isIncomplete: !newTeacherId || !a.classroomId }
+            });
+        });
+
+        const group = state.courseGroups.find(g => g.id === courseGroupId);
+        if (group && group.teacherId !== newTeacherId) {
+            dispatch({
+                type: 'UPDATE_COURSE_GROUP',
+                payload: { ...group, teacherId: newTeacherId }
+            });
+        }
+    };
+
+    const handleEditCourseGroup = (groupId: string, updates: { teacherId?: string; plannedClassroomId?: string }) => {
+        const group = state.courseGroups.find(g => g.id === groupId);
+        if (group) {
+            dispatch({
+                type: 'UPDATE_COURSE_GROUP',
+                payload: { ...group, ...updates }
+            });
+            if (updates.teacherId !== undefined) {
+                handleReassignTeacher(groupId, updates.teacherId);
+            }
+        }
+    };
+
     const handleClearAllSchedules = () => {
         if (state.assignments.length === 0) {
             toast.error('No hay horarios agendados para borrar.');
@@ -586,7 +622,8 @@ export const useScheduleLogic = () => {
         handleDragEnd, handleDragStart,
         handleDeleteAssignment, handleSplitAssignment,
         handleAutoAssignAll, validateMove,
-        handleClearTeacherSchedule, handleClearAllSchedules
+        handleClearTeacherSchedule, handleClearAllSchedules,
+        handleReassignTeacher, handleEditCourseGroup
     };
 };
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
-import { Sparkles, Clock } from 'lucide-react';
+import { Sparkles, Clock, Pencil } from 'lucide-react';
 
 interface DraggableSessionProps {
     session: {
@@ -12,9 +12,12 @@ interface DraggableSessionProps {
         sessionIndex: number;
     };
     subjectName: string;
+    teacherName?: string;
+    classroomName?: string;
+    onEdit?: () => void;
 }
 
-export const DraggableSession: React.FC<DraggableSessionProps> = ({ session, subjectName }) => {
+export const DraggableSession: React.FC<DraggableSessionProps> = ({ session, subjectName, teacherName, classroomName, onEdit }) => {
     const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
         id: session.id,
         data: {
@@ -28,23 +31,43 @@ export const DraggableSession: React.FC<DraggableSessionProps> = ({ session, sub
         zIndex: 1000,
     } : undefined;
 
+    const tooltipText = [
+        subjectName,
+        `Grupo: ${session.groupName}`,
+        teacherName ? `Docente: ${teacherName}` : 'Docente: Sin asignar',
+        classroomName ? `Aula: ${classroomName}` : 'Aula: Sin asignar',
+        `Bloque: ${session.hours}h`
+    ].join('\n');
+
     return (
         <div
             ref={setNodeRef}
             style={style}
             {...listeners}
             {...attributes}
+            title={tooltipText}
             className={`p-3 bg-white border border-slate-100 rounded-lg shadow-sm hover:border-blue-200 transition-colors cursor-grab active:cursor-grabbing ${isDragging ? 'opacity-50 border-blue-400 ring-2 ring-blue-100' : ''}`}
         >
             <div className="flex justify-between items-start mb-1">
                 <span className="font-bold text-xs text-slate-700 line-clamp-1">{subjectName}</span>
                 <span className="text-[10px] font-mono bg-blue-50 text-blue-600 px-1.5 rounded">{session.groupName}</span>
             </div>
-            <div className="flex items-center gap-2 mt-2">
-                <span className="text-[10px] font-bold bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full border border-amber-100">
-                    Bloque de {session.hours}h
-                </span>
-                {session.hours > 1 && <Sparkles size={10} className="text-amber-400" />}
+            <div className="flex items-center justify-between mt-2">
+                <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full border border-amber-100">
+                        Bloque de {session.hours}h
+                    </span>
+                    {session.hours > 1 && <Sparkles size={10} className="text-amber-400" />}
+                </div>
+                {onEdit && (
+                    <button
+                        onPointerDown={(e) => { e.stopPropagation(); onEdit(); }}
+                        className="p-1 hover:bg-slate-100 text-slate-400 hover:text-blue-600 rounded transition-colors"
+                        title="Editar docente/aula planificada"
+                    >
+                        <Pencil size={12} />
+                    </button>
+                )}
             </div>
         </div>
     );
@@ -56,10 +79,11 @@ interface DroppableCellProps {
     slotId: string;
     isBlocked?: boolean;
     isInvalid?: boolean;
+    isDragActive?: boolean;
     children?: React.ReactNode;
 }
 
-export const DroppableCell: React.FC<DroppableCellProps> = ({ id, day, slotId, isBlocked, isInvalid, children }) => {
+export const DroppableCell: React.FC<DroppableCellProps> = ({ id, day, slotId, isBlocked, isInvalid, isDragActive, children }) => {
     const { isOver, setNodeRef } = useDroppable({
         id,
         data: {
@@ -76,7 +100,9 @@ export const DroppableCell: React.FC<DroppableCellProps> = ({ id, day, slotId, i
             className={`h-[80px] border-b border-slate-100 p-1 relative group transition-colors ${isBlocked ? 'bg-slate-100'
                 : isOver && isInvalid ? 'bg-red-50 ring-2 ring-inset ring-red-400 z-20'
                     : isOver ? 'bg-blue-50 ring-2 ring-inset ring-blue-200 z-20'
-                        : 'hover:bg-slate-50'
+                        : isDragActive && isInvalid ? 'bg-red-50/80 border-red-100' // Light red for invalid
+                            : isDragActive && !isInvalid && !isBlocked ? 'bg-blue-50/50 border-blue-100' // Light blue for valid
+                                : 'hover:bg-slate-50'
                 }`}
         >
             {children}

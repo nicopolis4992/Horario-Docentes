@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Download, FileSpreadsheet, Image as ImageIcon, FileText, CheckCircle2 } from 'lucide-react';
+import { Download, FileSpreadsheet, Image as ImageIcon, FileText, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { useAppStore } from '../../../store';
 import { generateExportData, downloadCSV, downloadXLSX, captureAndDownloadImage, captureToPDF } from './exportHelpers';
 import { jsPDF } from 'jspdf';
@@ -51,6 +51,8 @@ const PrintableGrid: React.FC<{ resourceId: string, resourceType: 'teacher' | 'c
                         // Calculate visual blocks
                         const blocks: any[] = [];
                         const sorted = [...dayAssignments].sort((a, b) => {
+                            const groupCompare = (a.courseGroupId || '').localeCompare(b.courseGroupId || '');
+                            if (groupCompare !== 0) return groupCompare;
                             return timeSlots.findIndex(s => s.id === a.timeSlotId) - timeSlots.findIndex(s => s.id === b.timeSlotId);
                         });
 
@@ -95,13 +97,13 @@ const PrintableGrid: React.FC<{ resourceId: string, resourceType: 'teacher' | 'c
                                         >
                                             <div className={`h-full rounded border-2 ${config.bg} border-${config.color.split('-')[1]}-400 flex flex-col p-1.5 overflow-hidden`}>
                                                 <div className="font-bold text-[10px] sm:text-xs text-slate-800 leading-tight">
-                                                    {subject?.name}
+                                                    {subject?.name || 'Materia'}
                                                 </div>
-                                                <div className="text-[9px] text-slate-600 truncate mt-0.5">
+                                                <div className="text-[9px] text-slate-600 mt-0.5">
                                                     {group?.name || 'Clase'}
                                                 </div>
                                                 <div className="mt-auto pt-1 flex justify-between text-[9px] font-bold text-slate-700">
-                                                    <span className="truncate max-w-[50%]">
+                                                    <span>
                                                         {resourceType === 'teacher' ? room?.name : teacher?.name}
                                                     </span>
                                                 </div>
@@ -123,6 +125,24 @@ const ExportView = () => {
     const [exportType, setExportType] = useState<'teacher' | 'classroom'>('teacher');
     const [selectedId, setSelectedId] = useState<string>('');
     const [isExporting, setIsExporting] = useState(false);
+
+    // Detect issues that block export
+    const hasIncompleteAssignments = state.assignments.some(a => a.isIncomplete || !a.teacherId || !a.classroomId);
+
+    // Detect overlapping assignments (same teacher or classroom at same day+time)
+    const hasOverlaps = (() => {
+        const seen = new Set<string>();
+        for (const a of state.assignments) {
+            const teacherKey = `teacher-${a.teacherId}-${a.day}-${a.timeSlotId}`;
+            const roomKey = `room-${a.classroomId}-${a.day}-${a.timeSlotId}`;
+            if (seen.has(teacherKey) || seen.has(roomKey)) return true;
+            seen.add(teacherKey);
+            seen.add(roomKey);
+        }
+        return false;
+    })();
+
+    const hasErrors = hasIncompleteAssignments || hasOverlaps;
 
     const handleDataExport = (format: 'csv' | 'xlsx') => {
         if (state.assignments.length === 0) {
@@ -194,6 +214,15 @@ const ExportView = () => {
                 <p className="text-slate-500 text-sm mt-1">Exporta la tabla de horarios o genera imágenes/PDFs de las cuadrículas.</p>
             </div>
 
+            {hasErrors && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3 text-red-700 text-sm font-medium">
+                    <AlertTriangle size={20} className="shrink-0" />
+                    <div>
+                        <strong>No se puede exportar.</strong> Hay {hasIncompleteAssignments ? 'asignaciones incompletas' : ''}{hasIncompleteAssignments && hasOverlaps ? ' y ' : ''}{hasOverlaps ? 'solapamientos de horario' : ''} que deben resolverse primero.
+                    </div>
+                </div>
+            )}
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
                 {/* Exportar Datos */}
@@ -216,13 +245,17 @@ const ExportView = () => {
                         <div className="flex gap-4">
                             <button
                                 onClick={() => handleDataExport('csv')}
-                                className="flex-1 flex items-center justify-center gap-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-3 rounded-lg font-bold transition-colors shadow-sm"
+                                disabled={hasErrors}
+                                className={`flex-1 flex items-center justify-center gap-2 border px-4 py-3 rounded-lg font-bold transition-colors shadow-sm ${hasErrors ? 'bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed opacity-50' : 'bg-white border-slate-300 hover:bg-slate-50 text-slate-700'
+                                    }`}
                             >
                                 <Download size={18} /> CSV
                             </button>
                             <button
                                 onClick={() => handleDataExport('xlsx')}
-                                className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-3 rounded-lg font-bold transition-colors shadow-sm"
+                                disabled={hasErrors}
+                                className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-bold transition-colors shadow-sm ${hasErrors ? 'bg-emerald-600/50 text-white/70 cursor-not-allowed opacity-50' : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                                    }`}
                             >
                                 <Download size={18} /> Excel (.xlsx)
                             </button>
@@ -283,10 +316,10 @@ const ExportView = () => {
                         <div className="flex gap-4 pt-2">
                             <button
                                 onClick={() => handleVisualExport('png')}
-                                disabled={!selectedId}
-                                className={`flex-1 flex flex-col items-center justify-center gap-2 px-4 py-4 rounded-lg font-bold transition-colors border ${selectedId
-                                    ? 'bg-white hover:bg-slate-50 border-slate-300 text-slate-700 shadow-sm'
-                                    : 'bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed'
+                                disabled={!selectedId || hasErrors}
+                                className={`flex-1 flex flex-col items-center justify-center gap-2 px-4 py-4 rounded-lg font-bold transition-colors border ${!selectedId || hasErrors
+                                    ? 'bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed opacity-50'
+                                    : 'bg-white hover:bg-slate-50 border-slate-300 text-slate-700 shadow-sm'
                                     }`}
                             >
                                 <ImageIcon size={24} />
@@ -295,7 +328,9 @@ const ExportView = () => {
                             </button>
                             <button
                                 onClick={() => handleVisualExport('pdf')}
-                                className="flex-1 flex flex-col items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-4 rounded-lg font-bold transition-colors shadow-sm"
+                                disabled={hasErrors}
+                                className={`flex-1 flex flex-col items-center justify-center gap-2 px-4 py-4 rounded-lg font-bold transition-colors shadow-sm ${hasErrors ? 'bg-blue-600/50 text-white/50 cursor-not-allowed opacity-50' : 'bg-blue-600 hover:bg-blue-700 text-white'
+                                    }`}
                             >
                                 <FileText size={24} />
                                 <span>Descargar PDF</span>
@@ -309,7 +344,7 @@ const ExportView = () => {
             </div>
 
             {/* Render hidden printable grids for html2canvas to capture */}
-            <div className="fixed top-0 left-0 -z-50 opacity-0 pointer-events-none" style={{ width: '1000px', height: '10px', overflow: 'hidden' }}>
+            <div className="fixed top-0 left-0 -z-50 opacity-0 pointer-events-none" style={{ width: '1000px' }}>
                 {list.map(item => (
                     <PrintableGrid key={item.id} resourceId={item.id} resourceType={exportType} />
                 ))}

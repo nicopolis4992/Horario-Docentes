@@ -21,10 +21,28 @@ const ScheduleViewContent = () => {
                 <PendingSidebar
                     pendingSessions={logic.pendingSessions}
                     subjects={logic.state.subjects}
+                    teachers={logic.state.teachers}
+                    classrooms={logic.state.classrooms}
+                    courseGroups={logic.state.courseGroups}
                     viewMode={logic.viewMode}
                     showAllPending={logic.showAllPending}
                     onToggleShowAll={logic.setShowAllPending}
                     isSidebarOpen={logic.isSidebarOpen}
+                    onEditSession={(session) => {
+                        logic.openAssignmentModal(
+                            'Lunes' as any,
+                            logic.timeSlots[0],
+                            undefined
+                        );
+                        // Pre-fill the modal with this session's group data
+                        logic.setAssignMode('group');
+                        const group = logic.state.courseGroups.find(g => g.id === session.groupId);
+                        if (group) {
+                            logic.setFormSubjectId(group.subjectId);
+                            logic.setFormTeacherId(group.teacherId || '');
+                            logic.setFormClassroomId(group.plannedClassroomId || '');
+                        }
+                    }}
                 />
 
                 {/* MAIN CONTENT */}

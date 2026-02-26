@@ -33,6 +33,7 @@ const TeachersView = () => {
 
     // Controls if we are showing the custom input field
     const [isCustomHoursMode, setIsCustomHoursMode] = useState(false);
+    const [activeRightTab, setActiveRightTab] = useState<'specialties' | 'availability'>('specialties');
 
     // Matrix helpers
     const timeSlots = generateTimeSlots();
@@ -63,6 +64,7 @@ const TeachersView = () => {
             setIsCustomHoursMode(false);
         }
         setIsModalOpen(true);
+        setActiveRightTab('specialties');
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -301,30 +303,6 @@ const TeachersView = () => {
                                 )}
                             </div>
 
-                            <div className="p-4 border border-slate-200 rounded-lg">
-                                <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center">
-                                    <Layers size={16} className="mr-2 text-slate-400" /> Especialidades
-                                </h4>
-                                <div className="max-h-40 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-                                    {state.subjects.map(subject => {
-                                        const isChecked = formData.allowedSubjectIds?.includes(subject.id);
-                                        return (
-                                            <label key={subject.id} className="flex items-center gap-2 p-1.5 rounded hover:bg-slate-50 cursor-pointer">
-                                                <input
-                                                    type="checkbox" checked={isChecked}
-                                                    onChange={() => {
-                                                        const current = formData.allowedSubjectIds || [];
-                                                        const next = isChecked ? current.filter(id => id !== subject.id) : [...current, subject.id];
-                                                        setFormData({ ...formData, allowedSubjectIds: next });
-                                                    }}
-                                                />
-                                                <span className="text-xs truncate">{subject.name}</span>
-                                            </label>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Color</label>
                                 <div className="flex flex-wrap gap-2">
@@ -339,35 +317,82 @@ const TeachersView = () => {
                             </div>
                         </div>
 
-                        <div className="lg:col-span-8 bg-slate-50 p-4 rounded-xl border border-slate-200">
-                            <h4 className="font-bold text-slate-700 flex items-center gap-2 mb-4 text-sm">
-                                <CalendarDays size={18} /> Disponibilidad (Bloqueos)
-                            </h4>
-                            <div className="overflow-auto bg-white rounded-lg border border-slate-200 max-h-[500px]">
-                                <div className="grid grid-cols-[80px_repeat(6,1fr)] gap-px bg-slate-100">
-                                    <div className="bg-slate-50 sticky top-0 left-0 z-20"></div>
-                                    {days.map(day => (
-                                        <button key={day} type="button" onClick={() => toggleDayAvailability(day)} className="bg-slate-50 p-2 text-center text-[10px] font-bold sticky top-0 z-10">{day}</button>
-                                    ))}
-                                    {timeSlots.map(slot => (
-                                        <React.Fragment key={slot.id}>
-                                            <div className="bg-slate-50 p-1 text-[9px] font-mono text-slate-500 text-right pr-2">{slot.start}</div>
-                                            {days.map(day => {
-                                                const isUnavailable = formData.unavailableSlots?.includes(`${day}-${slot.id}`);
-                                                return (
-                                                    <button
-                                                        key={`${day}-${slot.id}`} type="button"
-                                                        onClick={() => toggleSlotAvailability(day, slot.id)}
-                                                        className={`h-8 border-t border-l border-slate-100 flex items-center justify-center ${isUnavailable ? 'bg-red-50' : 'bg-white'}`}
-                                                    >
-                                                        {isUnavailable && <X size={12} className="text-red-300" />}
-                                                    </button>
-                                                );
-                                            })}
-                                        </React.Fragment>
-                                    ))}
-                                </div>
+                        <div className="lg:col-span-8 bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col">
+                            {/* Pestañas */}
+                            <div className="flex bg-slate-100 p-1 rounded-lg mb-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setActiveRightTab('specialties')}
+                                    className={`flex-1 py-2 text-sm font-bold rounded-md transition-all flex items-center justify-center gap-2 ${activeRightTab === 'specialties' ? 'bg-white shadow text-blue-700' : 'text-slate-500 hover:text-slate-700'
+                                        }`}
+                                >
+                                    <Layers size={16} /> Especialidades
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setActiveRightTab('availability')}
+                                    className={`flex-1 py-2 text-sm font-bold rounded-md transition-all flex items-center justify-center gap-2 ${activeRightTab === 'availability' ? 'bg-white shadow text-blue-700' : 'text-slate-500 hover:text-slate-700'
+                                        }`}
+                                >
+                                    <CalendarDays size={16} /> Disponibilidad
+                                </button>
                             </div>
+
+                            {/* Contenido de Especialidades */}
+                            {activeRightTab === 'specialties' && (
+                                <div className="flex-1 overflow-y-auto">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                        {state.subjects.map(subject => {
+                                            const isChecked = formData.allowedSubjectIds?.includes(subject.id);
+                                            return (
+                                                <label key={subject.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white cursor-pointer border border-transparent hover:border-slate-200 transition-colors">
+                                                    <input
+                                                        type="checkbox" checked={isChecked}
+                                                        onChange={() => {
+                                                            const current = formData.allowedSubjectIds || [];
+                                                            const next = isChecked ? current.filter(id => id !== subject.id) : [...current, subject.id];
+                                                            setFormData({ ...formData, allowedSubjectIds: next });
+                                                        }}
+                                                        className="rounded text-blue-600 focus:ring-blue-500"
+                                                    />
+                                                    <span className="text-sm truncate">{subject.name}</span>
+                                                </label>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Contenido de Disponibilidad */}
+                            {activeRightTab === 'availability' && (
+                                <div className="flex-1 overflow-auto">
+                                    <div className="bg-white rounded-lg border border-slate-200 max-h-[500px] overflow-auto">
+                                        <div className="grid grid-cols-[80px_repeat(6,1fr)] gap-px bg-slate-100">
+                                            <div className="bg-slate-50 sticky top-0 left-0 z-20"></div>
+                                            {days.map(day => (
+                                                <button key={day} type="button" onClick={() => toggleDayAvailability(day)} className="bg-slate-50 p-2 text-center text-[10px] font-bold sticky top-0 z-10">{day}</button>
+                                            ))}
+                                            {timeSlots.map(slot => (
+                                                <React.Fragment key={slot.id}>
+                                                    <div className="bg-slate-50 p-1 text-[9px] font-mono text-slate-500 text-right pr-2">{slot.start}</div>
+                                                    {days.map(day => {
+                                                        const isUnavailable = formData.unavailableSlots?.includes(`${day}-${slot.id}`);
+                                                        return (
+                                                            <button
+                                                                key={`${day}-${slot.id}`} type="button"
+                                                                onClick={() => toggleSlotAvailability(day, slot.id)}
+                                                                className={`h-8 border-t border-l border-slate-100 flex items-center justify-center ${isUnavailable ? 'bg-red-50' : 'bg-white'}`}
+                                                            >
+                                                                {isUnavailable && <X size={12} className="text-red-300" />}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </React.Fragment>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 

@@ -79,7 +79,7 @@ const ScheduleCell = ({
     }
 
     return (
-        <DroppableCell id={id} day={day} slotId={timeSlot.id} isBlocked={isBlocked} isInvalid={isInvalidDrag}>
+        <DroppableCell id={id} day={day} slotId={timeSlot.id} isBlocked={isBlocked} isInvalid={isInvalidDrag} isDragActive={!!activeId}>
             {!isBlocked ? (
                 <button
                     onClick={() => handleCellClick(day, timeSlot)}

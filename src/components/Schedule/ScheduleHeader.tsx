@@ -1,5 +1,5 @@
 import React from 'react';
-import { CalendarDays, Filter, Users, School, Sparkles, CheckCircle2, Trash2, Sidebar, SidebarClose } from 'lucide-react';
+import { CalendarDays, Filter, Users, School, Sparkles, CheckCircle2, Trash2, Sidebar, SidebarClose, AlertTriangle } from 'lucide-react';
 import { useScheduleContext } from './ScheduleContext';
 import toast from 'react-hot-toast';
 
@@ -95,16 +95,35 @@ const ScheduleHeader = () => {
                 {/* Constant Right Actions */}
                 <div className="flex flex-wrap items-center gap-4 w-full xl:w-auto justify-start xl:justify-end">
 
-                    {/* Pending Hours Badge (Teachers only) */}
-                    {viewMode === 'teacher' && (
-                        <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg shrink-0 mr-2">
-                            <div className="text-xs font-medium text-slate-600">Por Asignar:</div>
-                            <div className={`text-sm font-bold ${pendingHours === 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
-                                {pendingHours} hrs
+                    {/* Teacher Hours Badge */}
+                    {viewMode === 'teacher' && selectedTeacherId && (() => {
+                        const teacher = state.teachers.find(t => t.id === selectedTeacherId);
+                        const assignedHours = state.assignments.filter(a => a.teacherId === selectedTeacherId).length;
+                        const maxHours = teacher?.maxHours || 0;
+                        const isExceeded = maxHours > 0 && assignedHours > maxHours;
+                        const isComplete = maxHours > 0 && assignedHours === maxHours;
+                        const isPending = assignedHours < maxHours;
+
+                        const badgeBg = isExceeded ? 'bg-red-50 border-red-200'
+                            : isComplete ? 'bg-emerald-50 border-emerald-200'
+                                : isPending ? 'bg-amber-50 border-amber-200'
+                                    : 'bg-slate-50 border-slate-200';
+                        const hourColor = isExceeded ? 'text-red-600'
+                            : isComplete ? 'text-emerald-600'
+                                : isPending ? 'text-amber-600'
+                                    : 'text-slate-600';
+
+                        return (
+                            <div className={`flex items-center gap-2 px-3 py-1.5 ${badgeBg} border rounded-lg shrink-0 mr-2`}>
+                                {isExceeded && <AlertTriangle size={14} className="text-red-500" />}
+                                <div className="text-xs font-medium text-slate-600">{isPending ? 'Por Asignar:' : 'Horas:'}</div>
+                                <div className={`text-sm font-bold ${hourColor}`}>
+                                    {assignedHours}/{maxHours}h
+                                </div>
+                                {isComplete && <CheckCircle2 size={16} className="text-emerald-500 ml-1" />}
                             </div>
-                            {pendingHours === 0 && <CheckCircle2 size={16} className="text-emerald-500 ml-1" />}
-                        </div>
-                    )}
+                        );
+                    })()}
 
                     <div className="flex gap-2 justify-end">
                         {viewMode === 'teacher' && selectedTeacherId && (
@@ -132,51 +151,52 @@ const ScheduleHeader = () => {
 
             {/* Sub-header component for Teacher Initials Selection */}
             {viewMode === 'teacher' && (
-                <div className="bg-slate-50 px-6 py-3 border-t border-slate-200 overflow-x-auto flex items-center justify-between gap-3 custom-scrollbar">
-                    <div className="flex items-center gap-3">
-                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider shrink-0 mr-2">Docentes:</span>
-                        {state.teachers.map(teacher => {
-                            const isSelected = selectedTeacherId === teacher.id;
-                            // Find if this teacher has pending hours
-                            const hasPending = state.courseGroups.some(g => {
-                                if (g.teacherId !== teacher.id) return false;
-                                const assignedCount = state.assignments.filter(a => a.courseGroupId === g.id).length;
-                                return assignedCount < g.totalHours;
-                            });
+                <div className="bg-slate-50 border-t border-slate-200 flex flex-col">
+                    <div className="px-6 py-3 overflow-x-auto flex items-center justify-between gap-3 custom-scrollbar">
+                        <div className="flex items-center gap-3">
+                            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider shrink-0 mr-2">Docentes:</span>
+                            {state.teachers.map(teacher => {
+                                const isSelected = selectedTeacherId === teacher.id;
+                                // Find if this teacher has pending hours
+                                const hasPending = state.courseGroups.some(g => {
+                                    if (g.teacherId !== teacher.id) return false;
+                                    const assignedCount = state.assignments.filter(a => a.courseGroupId === g.id).length;
+                                    return assignedCount < g.totalHours;
+                                });
 
-                            return (
-                                <button
-                                    key={teacher.id}
-                                    onClick={() => setSelectedTeacherId(teacher.id)}
-                                    title={teacher.name}
-                                    className={`relative w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 transition-all shadow-sm
+                                return (
+                                    <button
+                                        key={teacher.id}
+                                        onClick={() => setSelectedTeacherId(teacher.id)}
+                                        title={teacher.name}
+                                        className={`relative w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 transition-all shadow-sm
                                         ${isSelected ? 'ring-2 ring-offset-2 ring-blue-500 scale-110 z-10' : 'hover:scale-105 border border-slate-200'}
                                     `}
-                                    style={{
-                                        backgroundColor: isSelected ? teacher.color : '#ffffff',
-                                        color: isSelected ? '#ffffff' : teacher.color,
-                                        borderColor: isSelected ? teacher.color : undefined
-                                    }}
-                                >
-                                    {getInitials(teacher.name)}
-                                    {hasPending && !isSelected && (
-                                        <span className="absolute top-0 right-0 w-3 h-3 bg-amber-500 border-2 border-white rounded-full"></span>
-                                    )}
-                                </button>
-                            );
-                        })}
+                                        style={{
+                                            backgroundColor: isSelected ? teacher.color : '#ffffff',
+                                            color: isSelected ? '#ffffff' : teacher.color,
+                                            borderColor: isSelected ? teacher.color : undefined
+                                        }}
+                                    >
+                                        {getInitials(teacher.name)}
+                                        {hasPending && !isSelected && (
+                                            <span className="absolute top-0 right-0 w-3 h-3 bg-amber-500 border-2 border-white rounded-full"></span>
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        {selectedTeacherId && (
+                            <button
+                                onClick={confirmClearTeacher}
+                                className="flex items-center justify-end gap-1.5 px-3 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-full text-xs font-bold transition-colors shrink-0 ml-4 border border-red-200"
+                                title="Vaciar horario de este docente"
+                            >
+                                <Trash2 size={12} />
+                                <span>Vaciar Docente</span>
+                            </button>
+                        )}
                     </div>
-                    {/* Vaciar Docente moved here */}
-                    {selectedTeacherId && (
-                        <button
-                            onClick={confirmClearTeacher}
-                            className="flex items-center justify-end gap-1.5 px-3 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-full text-xs font-bold transition-colors shrink-0 ml-4 border border-red-200"
-                            title="Vaciar horario de este docente"
-                        >
-                            <Trash2 size={12} />
-                            <span>Vaciar Docente</span>
-                        </button>
-                    )}
                 </div>
             )}
 
