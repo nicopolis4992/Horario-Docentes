@@ -2,7 +2,7 @@ import * as XLSX from 'xlsx';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { AppState } from '../../../types';
-import { generateTimeSlots } from '../../../utils';
+import { generateTimeSlots, DAY_NUMBER_MAP, getBlockCode } from '../../../utils';
 
 /**
  * Generates a flat array of objects representing the schedule assignments,
@@ -11,39 +11,66 @@ import { generateTimeSlots } from '../../../utils';
 export const generateExportData = (state: AppState) => {
     const timeSlots = generateTimeSlots();
 
-    // Sort assignments logically
-    const sortedAssignments = [...state.assignments].sort((a, b) => {
-        // Sort by subject name, then group name, then day, then time slot
-        const subjectA = state.subjects.find(s => s.id === a.subjectId)?.name || '';
-        const subjectB = state.subjects.find(s => s.id === b.subjectId)?.name || '';
-        if (subjectA !== subjectB) return subjectA.localeCompare(subjectB);
+    return state.courseGroups.map(group => {
+        const subject = state.subjects.find(s => s.id === group.subjectId);
+        const groupAssignments = state.assignments.filter(a => a.courseGroupId === group.id);
 
-        const groupA = state.courseGroups.find(g => g.id === a.courseGroupId)?.name || '';
-        const groupB = state.courseGroups.find(g => g.id === b.courseGroupId)?.name || '';
-        if (groupA !== groupB) return groupA.localeCompare(groupB);
+        let firstSlotCode = '';
+        let isDiurno = false;
+        let firstSlot = null;
+        let firstRoom = null;
+        let teacher = null;
 
-        if (a.day !== b.day) return a.day.localeCompare(b.day);
+        if (groupAssignments.length > 0) {
+            // Sort to find the chronologically first assignment
+            groupAssignments.sort((a, b) => {
+                if (a.day !== b.day) {
+                    return DAY_NUMBER_MAP[a.day] - DAY_NUMBER_MAP[b.day];
+                }
+                const slotA = timeSlots.findIndex(s => s.id === a.timeSlotId);
+                const slotB = timeSlots.findIndex(s => s.id === b.timeSlotId);
+                return slotA - slotB;
+            });
 
-        const slotA = timeSlots.findIndex(s => s.id === a.timeSlotId);
-        const slotB = timeSlots.findIndex(s => s.id === b.timeSlotId);
-        return slotA - slotB;
-    });
+            const firstAssignment = groupAssignments[0];
+            const slotIndex = timeSlots.findIndex(s => s.id === firstAssignment.timeSlotId);
+            firstSlot = timeSlots[slotIndex];
 
-    return sortedAssignments.map(a => {
-        const subject = state.subjects.find(s => s.id === a.subjectId);
-        const teacher = state.teachers.find(t => t.id === a.teacherId);
-        const room = state.classrooms.find(c => c.id === a.classroomId);
-        const group = state.courseGroups.find(g => g.id === a.courseGroupId);
-        const slot = timeSlots.find(s => s.id === a.timeSlotId);
+            if (firstSlot) {
+                firstSlotCode = getBlockCode(firstAssignment.day, slotIndex).toString();
+                // "Diurno" if it starts before 17:50
+                isDiurno = firstSlot.start < '17:50';
+            }
+
+            firstRoom = state.classrooms.find(c => c.id === firstAssignment.classroomId);
+            teacher = state.teachers.find(t => t.id === firstAssignment.teacherId || group.teacherId);
+        } else {
+            teacher = state.teachers.find(t => t.id === group.teacherId);
+        }
 
         return {
-            'Materia': subject?.name || 'Materia Desconocida',
-            'Paralelo': group?.name || 'Manual',
-            'Docente': teacher?.name || 'Sin Asignar',
-            'Aula': room?.name || 'Sin Asignar',
-            'Día': a.day,
-            'Hora Inicio': slot?.start || '',
-            'Hora Fin': slot?.end || ''
+            'camp_code': subject?.sede || 'UP',
+            'banner_id_principal': teacher?.institutionalId || '',
+            'id_instructor_secundario': '(VACIO)',
+            'id_instructor_terciario': '(VACIO)',
+            'id_instructor_cuaternario': '(VACIO)',
+            'id_instructor_quinario': '(VACIO)',
+            'matri_o_periodo': subject?.semester || '',
+            'sigla': subject?.sigla || '',
+            'tipo': firstRoom?.type || '',
+            'seccion': group.name,
+            'nrc': '(VACIO)',
+            'cupo': group.studentCount || subject?.projectedStudents || 0,
+            'listacruzada': '(VACIO)',
+            'matu_vesp': firstSlot ? (isDiurno ? 'Diurno' : 'Vespertino') : '',
+            'carrera': subject?.carrera || 'MULTIMEDIA Y PROD.AUDIOVISUAL',
+            'p1': '(VACIO)',
+            'nume_sala': firstRoom?.name || '',
+            'h1': firstSlotCode,
+            'f1': '(VACIO)',
+            'w1': '(VACIO)',
+            'cred_progra': subject?.credits || 0,
+            'sesion_dictado': '(VACIO)'
         };
     });
 };

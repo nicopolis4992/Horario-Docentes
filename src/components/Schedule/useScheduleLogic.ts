@@ -28,6 +28,25 @@ export const useScheduleLogic = () => {
     // View Mode: 'teachers' or 'classrooms'
     const [viewMode, setViewMode] = useState<'teacher' | 'classroom'>('teacher');
 
+    // Schedule Filters
+    const [weekMode, setWeekMode] = useState<'workweek' | 'fullweek'>('workweek');
+    const [scheduleFilter, setScheduleFilter] = useState<'all' | 'diurno' | 'vespertino'>('all');
+
+    const visibleDays = useMemo(() => {
+        return weekMode === 'fullweek' ? DAYS : WEEKDAYS;
+    }, [weekMode]);
+
+    const visibleTimeSlots = useMemo(() => {
+        if (scheduleFilter === 'all') return timeSlots;
+        if (scheduleFilter === 'diurno') {
+            return timeSlots.filter(s => s.start < '17:50');
+        }
+        if (scheduleFilter === 'vespertino') {
+            return timeSlots.filter(s => s.start >= '17:50');
+        }
+        return timeSlots;
+    }, [timeSlots, scheduleFilter]);
+
     // Selection State
     const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null);
     const [selectedClassroomId, setSelectedClassroomId] = useState<string | null>(null);
@@ -334,7 +353,11 @@ export const useScheduleLogic = () => {
             const session = active.data.current.session;
             const group = state.courseGroups.find(g => g.id === session.groupId);
 
-            let teacherId = group?.teacherId || (viewMode === 'teacher' ? selectedTeacherId || '' : '');
+            // In teacher mode, ALWAYS use the selected teacher (the one being viewed)
+            // This enables cross-teacher reassignment via drag & drop
+            let teacherId = viewMode === 'teacher' && selectedTeacherId
+                ? selectedTeacherId
+                : (group?.teacherId || '');
             // In classrooms mode, ALWAYS use the selected classroom (the one being viewed)
             // This enables cross-classroom reassignment via drag & drop
             let classroomId = viewMode === 'classroom' && selectedClassroomId
@@ -345,6 +368,12 @@ export const useScheduleLogic = () => {
             const isIncomplete = !teacherId || !classroomId || !validation.valid;
 
             assignSessionToCell(session, dropDay, dropSlotId, teacherId, classroomId, isIncomplete);
+
+            // If teacher changed (cross-teacher drag), update the course group
+            if (group && teacherId && group.teacherId !== teacherId) {
+                handleReassignTeacher(group.id, teacherId);
+            }
+
             if (!validation.valid) {
                 toast(`⚠️ Asignada con conflicto: ${validation.error}`, { icon: '⚠️' });
             } else if (!teacherId || !classroomId) {
@@ -596,19 +625,21 @@ export const useScheduleLogic = () => {
 
     return {
         // State
-        state, dispatch, timeSlots,
+        state, dispatch, timeSlots, visibleTimeSlots, visibleDays,
         viewMode, selectedTeacherId, selectedClassroomId,
         selectedCell, assignMode, selectedGroupId,
         formSubjectId, formTeacherId, formClassroomId,
         editingAssignmentIds, activeId,
         showAllPending,
         isSidebarOpen,
+        weekMode, scheduleFilter,
 
         // Setters
         setSelectedTeacherId, setSelectedClassroomId,
         setAssignMode, setFormSubjectId, setFormTeacherId, setFormClassroomId,
         setShowAllPending,
         setIsSidebarOpen,
+        setWeekMode, setScheduleFilter,
 
         // Computed
         pendingSessions, allPendingSessions,

@@ -5,10 +5,12 @@ export interface TimeSlot {
   start: string; // "07:00"
   end: string;   // "08:00"
   label: string; // "07:00 - 08:00"
+  code: number;  // Numeric code for the block (e.g., 101)
 }
 
 export interface Teacher {
   id: string;
+  institutionalId?: string; // ID institucional (cédula, código UDLA, etc.)
   name: string;
   maxHours: number; // Changed from '15 | 21' to number to support custom hours
   color: string; // Hex color for calendar visualization
@@ -16,7 +18,7 @@ export interface Teacher {
   allowedSubjectIds?: string[]; // Teacher specialties (ids of Subjects they can teach)
 }
 
-export type ClassroomType = 'Aula' | 'Lab PC' | 'Lab Mac';
+export type ClassroomType = 'AULA' | 'PC' | 'MAC';
 
 export interface Classroom {
   id: string;
@@ -31,6 +33,9 @@ export type SubjectArea = 'Audiovisual' | 'Animación' | 'Interactividad';
 export interface Subject {
   id: string;
   name: string;
+  sigla?: string; // e.g., "PMCZ4462"
+  carrera?: string; // Editable, default: "MULTIMEDIA Y PROD.AUDIOVISUAL"
+  sede?: string; // Editable, default: "UP"
   semester?: number; // 1-10, ej: 1 = primer semestre
   credits: number; // Hours per week implies blocks
   projectedStudents: number;

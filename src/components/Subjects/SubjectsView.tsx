@@ -35,6 +35,9 @@ const SubjectsView = () => {
 
     const [formData, setFormData] = useState<SubjectFormData>({
         name: '',
+        sigla: '',
+        carrera: 'MULTIMEDIA Y PROD.AUDIOVISUAL',
+        sede: 'UP',
         credits: 2,
         projectedStudents: 30,
         area: 'Audiovisual',
@@ -54,6 +57,9 @@ const SubjectsView = () => {
             setEditingSubject(null);
             setFormData({
                 name: '',
+                sigla: '',
+                carrera: 'MULTIMEDIA Y PROD.AUDIOVISUAL',
+                sede: 'UP',
                 credits: 2,
                 projectedStudents: 30,
                 area: 'Audiovisual',
@@ -263,8 +269,8 @@ const SubjectsView = () => {
                 title={editingSubject ? 'Editar Materia' : 'Nueva Materia'}
             >
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="grid grid-cols-3 gap-4">
-                        <div className="col-span-2">
+                    <div className="grid grid-cols-4 gap-4">
+                        <div className="col-span-3">
                             <label className="block text-sm font-medium text-slate-700 mb-1">Nombre de la Materia</label>
                             <input
                                 autoFocus
@@ -277,17 +283,48 @@ const SubjectsView = () => {
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Semestre</label>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Sigla</label>
+                            <input
+                                type="text"
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-slate-900 bg-white uppercase"
+                                value={formData.sigla || ''}
+                                onChange={e => setFormData({ ...formData, sigla: e.target.value.toUpperCase() })}
+                                placeholder="AUD101"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Nivel / Semestre</label>
                             <select
                                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-slate-900 bg-white"
                                 value={formData.semester || ''}
                                 onChange={e => setFormData({ ...formData, semester: e.target.value ? parseInt(e.target.value) : undefined })}
                             >
-                                <option value="">Sin semestre</option>
+                                <option value="">Sin nivel</option>
                                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(s => (
-                                    <option key={s} value={s}>Semestre {s}</option>
+                                    <option key={s} value={s}>Nivel {s}</option>
                                 ))}
                             </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Carrera</label>
+                            <input
+                                type="text"
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-slate-900 bg-white uppercase"
+                                value={formData.carrera || ''}
+                                onChange={e => setFormData({ ...formData, carrera: e.target.value.toUpperCase() })}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Sede</label>
+                            <input
+                                type="text"
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-slate-900 bg-white uppercase"
+                                value={formData.sede || ''}
+                                onChange={e => setFormData({ ...formData, sede: e.target.value.toUpperCase() })}
+                            />
                         </div>
                     </div>
 

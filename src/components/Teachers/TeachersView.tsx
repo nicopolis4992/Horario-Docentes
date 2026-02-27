@@ -25,6 +25,7 @@ const TeachersView = () => {
     // Form State
     const [formData, setFormData] = useState<Partial<Teacher>>({
         name: '',
+        institutionalId: '',
         maxHours: 21,
         color: '#3B82F6',
         unavailableSlots: [],
@@ -56,6 +57,7 @@ const TeachersView = () => {
             setEditingTeacher(null);
             setFormData({
                 name: '',
+                institutionalId: '',
                 maxHours: 21,
                 color: colors[Math.floor(Math.random() * colors.length)],
                 unavailableSlots: [],
@@ -193,6 +195,9 @@ const TeachersView = () => {
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <h3 className="font-bold text-slate-800 truncate">{teacher.name}</h3>
+                                    {teacher.institutionalId && (
+                                        <p className="text-xs text-slate-400 font-mono">ID: {teacher.institutionalId}</p>
+                                    )}
                                     {/* Specialty Badges */}
                                     <div className="mt-3 flex flex-wrap gap-1">
                                         {teacher.allowedSubjectIds?.map(sid => {
@@ -268,6 +273,16 @@ const TeachersView = () => {
                                             className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 bg-white"
                                             value={formData.name || ''}
                                             onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">ID Institucional</label>
+                                        <input
+                                            type="text"
+                                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 bg-white"
+                                            placeholder="Ej: 1234567890"
+                                            value={formData.institutionalId || ''}
+                                            onChange={e => setFormData({ ...formData, institutionalId: e.target.value })}
                                         />
                                     </div>
                                 </div>

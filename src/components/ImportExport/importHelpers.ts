@@ -7,11 +7,11 @@ export type ImportTab = 'docentes' | 'materias' | 'aulas';
 export const EXPECTED_HEADERS: Record<ImportTab, { required: string[], optional: string[] }> = {
     docentes: {
         required: ['nombre', 'maxHoras'],
-        optional: ['materias']
+        optional: ['id', 'materias']
     },
     materias: {
         required: ['nombre', 'horas', 'estudiantesProyectados'],
-        optional: ['area', 'semestre', 'diasPreferidos', 'tipoAula', 'aulasEspecificas']
+        optional: ['area', 'semestre', 'diasPreferidos', 'tipoAula', 'aulasEspecificas', 'sigla', 'carrera', 'sede']
     },
     aulas: {
         required: ['nombre', 'tipo'],
@@ -97,6 +97,7 @@ export const mapRowToTeacher = (
     existingSubjects: Subject[]
 ): Teacher => {
     const name = row[columnMap['nombre']] || 'Sin Nombre';
+    const institutionalId = row[columnMap['id']] || '';
     const maxHours = parseNumber(row[columnMap['maxHoras']], 21);
 
     // Parse specialties (materia names separated by ;)
@@ -113,6 +114,7 @@ export const mapRowToTeacher = (
 
     return {
         id: crypto.randomUUID(),
+        institutionalId: institutionalId || undefined,
         name,
         maxHours,
         color: getRandomColor(),
@@ -130,6 +132,9 @@ export const mapRowToSubject = (
     existingClassrooms: Classroom[] // Needed to map "aulasEspecificas" (names -> ids)
 ): Subject => {
     const name = row[columnMap['nombre']] || 'Sin Nombre';
+    const sigla = row[columnMap['sigla']] || undefined;
+    const carrera = row[columnMap['carrera']] || 'MULTIMEDIA Y PROD.AUDIOVISUAL';
+    const sede = row[columnMap['sede']] || 'UP';
     const credits = parseNumber(row[columnMap['horas']], 2);
     const projectedStudents = parseNumber(row[columnMap['estudiantesProyectados']], 30);
 
@@ -155,13 +160,12 @@ export const mapRowToSubject = (
         return '';
     }).filter(Boolean) as DayOfWeek[];
 
-    // tipoAula
     const rawTipoAula = row[columnMap['tipoAula']] || '';
     let requiredClassroomType: ClassroomType | undefined = undefined;
     if (rawTipoAula) {
-        if (rawTipoAula.toLowerCase().includes('pc')) requiredClassroomType = 'Lab PC';
-        else if (rawTipoAula.toLowerCase().includes('mac')) requiredClassroomType = 'Lab Mac';
-        else requiredClassroomType = 'Aula';
+        if (rawTipoAula.toLowerCase().includes('pc')) requiredClassroomType = 'PC';
+        else if (rawTipoAula.toLowerCase().includes('mac')) requiredClassroomType = 'MAC';
+        else requiredClassroomType = 'AULA';
     }
 
     // aulasEspecificas
@@ -178,6 +182,9 @@ export const mapRowToSubject = (
     return {
         id: crypto.randomUUID(),
         name,
+        sigla,
+        carrera,
+        sede,
         semester,
         credits,
         projectedStudents,
@@ -200,9 +207,9 @@ export const mapRowToClassroom = (
 
     // tipo
     const rawTipo = row[columnMap['tipo']] || '';
-    let type: ClassroomType = 'Aula';
-    if (rawTipo.toLowerCase().includes('pc')) type = 'Lab PC';
-    if (rawTipo.toLowerCase().includes('mac')) type = 'Lab Mac';
+    let type: ClassroomType = 'AULA';
+    if (rawTipo.toLowerCase().includes('pc')) type = 'PC';
+    if (rawTipo.toLowerCase().includes('mac')) type = 'MAC';
 
     const maxCapacityStr = row[columnMap['capacidadMaxima']];
     const maxCapacity = maxCapacityStr ? parseNumber(maxCapacityStr, 40) : 40;
@@ -228,22 +235,22 @@ export const downloadTemplate = (tab: ImportTab) => {
 
     if (tab === 'docentes') {
         const headers = [...EXPECTED_HEADERS.docentes.required, ...EXPECTED_HEADERS.docentes.optional].join(',');
-        const row1 = "Ana García,21,Edición de Video;Guionismo";
-        const row2 = "Carlos López,15,";
+        const row1 = "Ana García,21,ID001,Edición de Video;Guionismo";
+        const row2 = "Carlos López,15,ID002,";
         csvContent = [headers, row1, row2].join('\n');
         filename = "plantilla_docentes.csv";
     }
     else if (tab === 'materias') {
         const headers = [...EXPECTED_HEADERS.materias.required, ...EXPECTED_HEADERS.materias.optional].join(',');
-        const row1 = "Edición de Video,3,57,Audiovisual,3,Lunes;Miércoles;Viernes,Lab PC,Lab PC 1;Lab PC 2";
-        const row2 = "Programación I,4,40,Interactividad,1,,,,";
+        const row1 = "Edición de Video,3,57,Audiovisual,3,Lunes;Miércoles;Viernes,PC,PC 1;PC 2,AUD101,MULTIMEDIA Y PROD.AUDIOVISUAL,UP";
+        const row2 = "Programación I,4,40,Interactividad,1,,,,,,,";
         csvContent = [headers, row1, row2].join('\n');
         filename = "plantilla_materias.csv";
     }
     else if (tab === 'aulas') {
         const headers = [...EXPECTED_HEADERS.aulas.required, ...EXPECTED_HEADERS.aulas.optional].join(',');
-        const row1 = "Aula 101,Aula,25,30";
-        const row2 = "Lab PC 1,Lab PC,25,25";
+        const row1 = "Aula 101,AULA,25,30";
+        const row2 = "Lab PC 1,PC,25,25";
         csvContent = [headers, row1, row2].join('\n');
         filename = "plantilla_aulas.csv";
     }

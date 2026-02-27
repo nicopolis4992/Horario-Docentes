@@ -20,7 +20,12 @@ const ScheduleHeader = () => {
         handleClearTeacherSchedule,
         handleClearAllSchedules,
         isSidebarOpen,
-        setIsSidebarOpen
+        setIsSidebarOpen,
+        weekMode,
+        setWeekMode,
+        scheduleFilter,
+        setScheduleFilter,
+        timeSlots
     } = useScheduleContext();
 
     const pendingHours = pendingSessions.reduce((acc, s) => acc + s.hours, 0);
@@ -89,6 +94,34 @@ const ScheduleHeader = () => {
                             <School size={16} />
                             Aula
                         </button>
+                    </div>
+
+                    {/* Schedule Filters */}
+                    <div className="hidden sm:flex items-center gap-3 border-l-2 border-slate-200 pl-6 shrink-0">
+                        <select
+                            value={scheduleFilter}
+                            onChange={(e) => setScheduleFilter(e.target.value as 'all' | 'diurno' | 'vespertino')}
+                            className="bg-white border border-slate-300 text-slate-700 text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium cursor-pointer shadow-sm hover:border-slate-400 transition-colors"
+                        >
+                            <option value="all">Todo el Día (7:00 - 21:50)</option>
+                            <option value="diurno">Diurno (hasta 17:45)</option>
+                            <option value="vespertino">Vespertino (desde 17:50)</option>
+                        </select>
+
+                        <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200 shadow-sm">
+                            <button
+                                onClick={() => setWeekMode('workweek')}
+                                className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${weekMode === 'workweek' ? 'bg-white text-blue-700 shadow border border-slate-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+                            >
+                                Lun-Vie
+                            </button>
+                            <button
+                                onClick={() => setWeekMode('fullweek')}
+                                className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${weekMode === 'fullweek' ? 'bg-white text-blue-700 shadow border border-slate-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+                            >
+                                Lun-Sáb
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -212,7 +245,16 @@ const ScheduleHeader = () => {
                             onChange={(e) => setSelectedClassroomId(e.target.value)}
                         >
                             <option value="">Selecciona un aula...</option>
-                            {state.classrooms.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                            {state.classrooms.map(c => {
+                                const assignedCount = state.assignments.filter(a => a.classroomId === c.id).length;
+                                const totalSlots = timeSlots.length * 6; // 6 days max (Mon-Sat)
+                                const percentage = Math.round((assignedCount / totalSlots) * 100);
+                                return (
+                                    <option key={c.id} value={c.id}>
+                                        {c.name} {assignedCount > 0 ? `(${percentage}% ocup.)` : ''}
+                                    </option>
+                                );
+                            })}
                         </select>
                     </div>
 

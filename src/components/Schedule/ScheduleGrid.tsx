@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { DAYS } from './useScheduleLogic';
+// Remove DAYS import since we use visibleDays from context
+// import { DAYS } from './useScheduleLogic';
 import { useScheduleContext } from './ScheduleContext';
 import ScheduleCell from './ScheduleCell';
 import { DroppableCell, DraggableAssignmentBlock } from './DndComponents';
-import { Clock, Plus, Ban, Edit2, Trash2, Scissors, Link, AlertTriangle } from 'lucide-react';
+import { Clock, Plus, Ban, Edit2, Trash2, Scissors, Link, AlertTriangle, Sparkles, CalendarDays } from 'lucide-react';
 import { AREA_CONFIG } from '../../../utils';
 import toast from 'react-hot-toast';
 
@@ -14,20 +15,49 @@ const ScheduleGrid = () => {
         selectedClassroomId,
         state,
         dispatch,
-        timeSlots,
+        visibleTimeSlots,
+        visibleDays,
         activeId,
         editingAssignmentIds,
         handleDeleteAssignment,
         handleSplitAssignment,
-        openAssignmentModal
+        openAssignmentModal,
+        handleAutoAssignAll,
+        allPendingSessions
     } = useScheduleContext();
 
     const [activeSplitMenuId, setActiveSplitMenuId] = useState<string | null>(null);
 
     if (viewMode === 'teacher' && !selectedTeacherId) {
+        const totalPending = allPendingSessions.length;
         return (
             <div className="flex-1 flex flex-col items-center justify-center text-slate-400 p-8 h-full bg-slate-50">
-                <p>Selecciona un docente para ver su horario.</p>
+                <div className="bg-slate-100 p-4 rounded-full mb-4">
+                    <CalendarDays size={48} className="text-slate-300" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-600 mb-2">Planificador de Horarios</h3>
+                <p className="text-sm text-slate-500 text-center max-w-md mb-6">
+                    Selecciona un docente arriba para ver y editar su horario, o auto-asigna todos los paralelos pendientes de una vez.
+                </p>
+                {totalPending > 0 && (
+                    <div className="flex flex-col items-center gap-3">
+                        <span className="text-xs text-slate-500 bg-amber-50 border border-amber-200 px-3 py-1 rounded-full font-medium">
+                            {totalPending} {totalPending === 1 ? 'sesión pendiente' : 'sesiones pendientes'} por agendar
+                        </span>
+                        <button
+                            onClick={handleAutoAssignAll}
+                            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-bold text-sm transition-colors shadow-sm"
+                        >
+                            <Sparkles size={16} />
+                            Auto-Asignar Todo
+                        </button>
+                    </div>
+                )}
+                {totalPending === 0 && (
+                    <span className="text-xs text-emerald-600 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full font-medium">
+                        ✅ Todos los paralelos están agendados
+                    </span>
+                )}
             </div>
         );
     }
@@ -44,9 +74,12 @@ const ScheduleGrid = () => {
         <div className="overflow-x-auto bg-white rounded-xl shadow-sm border border-slate-200 flex-1 relative min-h-0 flex flex-col">
             <div className="min-w-[800px] flex-1">
                 {/* Headers */}
-                <div className="grid grid-cols-[80px_repeat(6,1fr)] border-b-2 border-slate-200 bg-slate-50 sticky top-0 z-10 rounded-t-xl shrink-0">
+                <div
+                    style={{ gridTemplateColumns: `80px repeat(${visibleDays.length}, minmax(0, 1fr))` }}
+                    className="grid border-b-2 border-slate-200 bg-slate-50 sticky top-0 z-10 rounded-t-xl shrink-0"
+                >
                     <div className="p-3 border-r border-slate-200 font-bold text-slate-500 text-center text-sm shadow-[1px_0_0_0_#f1f5f9]">Hora</div>
-                    {DAYS.map(day => (
+                    {visibleDays.map(day => (
                         <div key={day} className="p-3 border-r border-slate-200 font-bold text-slate-700 text-center text-sm last:border-r-0">
                             {day}
                         </div>
@@ -55,10 +88,13 @@ const ScheduleGrid = () => {
 
                 {/* Grid Body */}
                 <div className="bg-slate-50 overflow-y-auto w-full relative">
-                    <div className="grid grid-cols-[80px_repeat(6,1fr)] min-h-max">
+                    <div
+                        style={{ gridTemplateColumns: `80px repeat(${visibleDays.length}, minmax(0, 1fr))` }}
+                        className="grid min-h-max"
+                    >
                         {/* TIME LABELS COLUMN */}
                         <div className="bg-slate-50 border-r border-slate-200 flex flex-col">
-                            {timeSlots.map(slot => (
+                            {visibleTimeSlots.map(slot => (
                                 <div key={slot.id} className="h-[80px] border-b border-slate-100 text-[10px] font-mono text-slate-500 flex flex-col items-center justify-center text-center p-2 shrink-0">
                                     <span>{slot.start}</span>
                                     <span className="w-8 h-px bg-slate-200 my-1"></span>
@@ -68,7 +104,7 @@ const ScheduleGrid = () => {
                         </div>
 
                         {/* DAY COLUMNS */}
-                        {DAYS.map(day => {
+                        {visibleDays.map(day => {
                             const resourceId = viewMode === 'teacher' ? selectedTeacherId : selectedClassroomId;
                             let dayAssignments = [];
                             let blockedSlots: string[] = [];
@@ -87,11 +123,11 @@ const ScheduleGrid = () => {
                                 const groupCompare = (a.courseGroupId || '').localeCompare(b.courseGroupId || '');
                                 if (groupCompare !== 0) return groupCompare;
                                 // Secondary sort: by time slot index within each group
-                                return timeSlots.findIndex(s => s.id === a.timeSlotId) - timeSlots.findIndex(s => s.id === b.timeSlotId);
+                                return visibleTimeSlots.findIndex(s => s.id === a.timeSlotId) - visibleTimeSlots.findIndex(s => s.id === b.timeSlotId);
                             });
 
                             sorted.forEach((a: any) => {
-                                const idx = timeSlots.findIndex(s => s.id === a.timeSlotId);
+                                const idx = visibleTimeSlots.findIndex(s => s.id === a.timeSlotId);
                                 const lastBlock = blocks[blocks.length - 1];
 
                                 if (lastBlock &&
@@ -109,7 +145,7 @@ const ScheduleGrid = () => {
                                 <div key={day} className="relative border-r border-slate-200 last:border-r-0">
 
                                     {/* BACKGROUND SLOTS */}
-                                    {timeSlots.map(slot => {
+                                    {visibleTimeSlots.map(slot => {
                                         const cellId = `${day}-${slot.id}-${resourceId}`;
                                         const isBlocked = viewMode === 'teacher' && blockedSlots.includes(`${day}-${slot.id}`);
 
@@ -189,7 +225,7 @@ const ScheduleGrid = () => {
                                                         onClick={(e) => {
                                                             if (isBlockIncomplete || hasOverlap) {
                                                                 e.stopPropagation();
-                                                                openAssignmentModal(day, timeSlots[slotIndex], block.ids);
+                                                                openAssignmentModal(day, visibleTimeSlots[slotIndex], block.ids);
                                                             }
                                                         }}
                                                         className={`w-full h-full rounded p-2 ${bgClass} ${borderClass} border flex flex-col justify-between shadow-md group pointer-events-auto text-left relative ${isBlockIncomplete || hasOverlap ? 'cursor-pointer hover:ring-2 hover:ring-red-200' : ''}`}
@@ -238,7 +274,7 @@ const ScheduleGrid = () => {
                                                                 </button>
                                                             )}
                                                             <button
-                                                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); openAssignmentModal(day, timeSlots[slotIndex], block.ids); }}
+                                                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); openAssignmentModal(day, visibleTimeSlots[slotIndex], block.ids); }}
                                                                 className="p-1 hover:bg-blue-50 text-blue-600 rounded transition-colors" title="Editar aula/docente">
                                                                 <Edit2 size={12} />
                                                             </button>

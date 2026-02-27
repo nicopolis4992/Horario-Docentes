@@ -1,4 +1,4 @@
-import { TimeSlot, SubjectArea, ClassroomType } from "./types";
+import { TimeSlot, SubjectArea, ClassroomType, DayOfWeek } from "./types";
 
 /**
  * Genera los bloques de tiempo basados en la regla de negocio:
@@ -9,30 +9,62 @@ import { TimeSlot, SubjectArea, ClassroomType } from "./types";
  */
 export const generateTimeSlots = (): TimeSlot[] => {
   const slots: TimeSlot[] = [];
-  let currentTime = 7 * 60; // 7:00 AM in minutes
-  const endTimeLimit = 17 * 60 + 45; // 17:45 in minutes
-  const blockDuration = 60;
-  const breakDuration = 5;
-
   let index = 0;
 
-  while (currentTime + blockDuration <= endTimeLimit) {
+  // Diurno: 7:00 a 17:45 (bloques de 60m + 5m break)
+  let currentTime = 7 * 60; // 7:00 AM
+  const diurnoLimit = 17 * 60 + 45; // 17:45
+
+  while (currentTime + 60 <= diurnoLimit) {
     const startMinutes = currentTime;
-    const endMinutes = currentTime + blockDuration;
+    const endMinutes = currentTime + 60;
 
     slots.push({
       id: `slot-${index}`,
       start: formatMinutesToTime(startMinutes),
       end: formatMinutesToTime(endMinutes),
-      label: `${formatMinutesToTime(startMinutes)} - ${formatMinutesToTime(endMinutes)}`
+      label: `${formatMinutesToTime(startMinutes)} - ${formatMinutesToTime(endMinutes)}`,
+      code: index + 1
     });
 
-    // Advance time + break
-    currentTime = endMinutes + breakDuration;
+    currentTime = endMinutes + 5; // 5 min break
+    index++;
+  }
+
+  // Vespertino: 17:50 a 21:50 (bloques de 60m, sin break)
+  currentTime = 17 * 60 + 50; // 17:50
+  const vespertinoLimit = 21 * 60 + 50; // 21:50
+
+  while (currentTime + 60 <= vespertinoLimit) {
+    const startMinutes = currentTime;
+    const endMinutes = currentTime + 60;
+
+    slots.push({
+      id: `slot-${index}`,
+      start: formatMinutesToTime(startMinutes),
+      end: formatMinutesToTime(endMinutes),
+      label: `${formatMinutesToTime(startMinutes)} - ${formatMinutesToTime(endMinutes)}`,
+      code: index + 1
+    });
+
+    currentTime = endMinutes; // No break
     index++;
   }
 
   return slots;
+};
+
+export const DAY_NUMBER_MAP: Record<DayOfWeek, number> = {
+  'Lunes': 1,
+  'Martes': 2,
+  'Miércoles': 3,
+  'Jueves': 4,
+  'Viernes': 5,
+  'Sábado': 6
+};
+
+export const getBlockCode = (day: DayOfWeek, slotIndex: number) => {
+  return DAY_NUMBER_MAP[day] * 100 + slotIndex + 1;
 };
 
 const formatMinutesToTime = (minutes: number): string => {
@@ -68,21 +100,21 @@ export const AREA_CONFIG: Record<SubjectArea, { label: string; color: string; bg
 
 // Configuration for Classroom Types
 export const CLASSROOM_CONFIG: Record<ClassroomType, { label: string; color: string; bg: string; border: string; iconColor: string }> = {
-  'Aula': {
+  'AULA': {
     label: 'Aula',
     color: 'text-emerald-700',
     bg: 'bg-emerald-50',
     border: 'border-emerald-200',
     iconColor: 'text-emerald-600'
   },
-  'Lab PC': {
+  'PC': {
     label: 'Lab PC',
     color: 'text-blue-700',
     bg: 'bg-blue-50',
     border: 'border-blue-200',
     iconColor: 'text-blue-600'
   },
-  'Lab Mac': {
+  'MAC': {
     label: 'Lab Mac',
     color: 'text-rose-700',
     bg: 'bg-rose-50',
@@ -105,16 +137,16 @@ export const MOCK_INITIAL_DATA = {
     { id: 't10', name: 'Roberto Vera', maxHours: 21, color: '#D946EF', unavailableSlots: [], allowedSubjectIds: ['s9', 's1'] },
   ],
   classrooms: [
-    { id: 'c1', name: 'Aula 101', maxCapacity: 30, recommendedCapacity: 25, type: 'Aula' },
-    { id: 'c2', name: 'Aula 102', maxCapacity: 30, recommendedCapacity: 25, type: 'Aula' },
-    { id: 'c3', name: 'Aula 103', maxCapacity: 25, recommendedCapacity: 20, type: 'Aula' },
-    { id: 'c4', name: 'Lab PC 1', maxCapacity: 25, recommendedCapacity: 25, type: 'Lab PC' },
-    { id: 'c5', name: 'Lab PC 2', maxCapacity: 20, recommendedCapacity: 20, type: 'Lab PC' },
-    { id: 'c6', name: 'Lab PC 3', maxCapacity: 15, recommendedCapacity: 15, type: 'Lab PC' },
-    { id: 'c7', name: 'Mac Lab 1', maxCapacity: 25, recommendedCapacity: 25, type: 'Lab Mac' },
-    { id: 'c8', name: 'Mac Lab 2', maxCapacity: 20, recommendedCapacity: 20, type: 'Lab Mac' },
-    { id: 'c9', name: 'Mac Lab 3', maxCapacity: 10, recommendedCapacity: 10, type: 'Lab Mac' },
-    { id: 'c10', name: 'Estudio AV', maxCapacity: 15, recommendedCapacity: 12, type: 'Aula' },
+    { id: 'c1', name: 'Aula 101', maxCapacity: 30, recommendedCapacity: 25, type: 'AULA' },
+    { id: 'c2', name: 'Aula 102', maxCapacity: 30, recommendedCapacity: 25, type: 'AULA' },
+    { id: 'c3', name: 'Aula 103', maxCapacity: 25, recommendedCapacity: 20, type: 'AULA' },
+    { id: 'c4', name: 'Lab PC 1', maxCapacity: 25, recommendedCapacity: 25, type: 'PC' },
+    { id: 'c5', name: 'Lab PC 2', maxCapacity: 20, recommendedCapacity: 20, type: 'PC' },
+    { id: 'c6', name: 'Lab PC 3', maxCapacity: 15, recommendedCapacity: 15, type: 'PC' },
+    { id: 'c7', name: 'Mac Lab 1', maxCapacity: 25, recommendedCapacity: 25, type: 'MAC' },
+    { id: 'c8', name: 'Mac Lab 2', maxCapacity: 20, recommendedCapacity: 20, type: 'MAC' },
+    { id: 'c9', name: 'Mac Lab 3', maxCapacity: 10, recommendedCapacity: 10, type: 'MAC' },
+    { id: 'c10', name: 'Estudio AV', maxCapacity: 15, recommendedCapacity: 12, type: 'AULA' },
   ],
   subjects: [
     { id: 's1', name: 'Edición de Video', semester: 3, credits: 3, projectedStudents: 57, area: 'Audiovisual', preferredDays: ['Lunes', 'Miércoles', 'Viernes'] },
