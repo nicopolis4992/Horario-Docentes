@@ -9,14 +9,17 @@ interface SidebarProps {
     selectedSubjectId: string | null;
     onSelectSubject: (id: string) => void;
     onBulkGenerate: () => void;
+    selectedTeacherId?: string | null;
+    onSelectTeacher?: (id: string) => void;
+    filterMode: FilterMode;
+    onFilterModeChange: (mode: FilterMode) => void;
 }
 
 type FilterMode = 'materias' | 'docentes';
 
-const SubjectListSidebar = ({ selectedSubjectId, onSelectSubject, onBulkGenerate }: SidebarProps) => {
+const SubjectListSidebar = ({ selectedSubjectId, onSelectSubject, onBulkGenerate, selectedTeacherId: selectedTeacherIdProp, onSelectTeacher, filterMode, onFilterModeChange }: SidebarProps) => {
     const { state, dispatch } = useAppStore();
     const [searchTerm, setSearchTerm] = useState('');
-    const [filterMode, setFilterMode] = useState<FilterMode>('materias');
     const [selectedFilterTeacherId, setSelectedFilterTeacherId] = useState<string | null>(null);
 
     // --- Materias mode filtering ---
@@ -80,7 +83,7 @@ const SubjectListSidebar = ({ selectedSubjectId, onSelectSubject, onBulkGenerate
     };
 
     const handleModeChange = (mode: FilterMode) => {
-        setFilterMode(mode);
+        onFilterModeChange(mode);
         setSearchTerm('');
         setSelectedFilterTeacherId(null);
     };
@@ -248,8 +251,18 @@ const SubjectListSidebar = ({ selectedSubjectId, onSelectSubject, onBulkGenerate
                             return (
                                 <button
                                     key={teacher.id}
-                                    onClick={() => { setSelectedFilterTeacherId(teacher.id); setSearchTerm(''); }}
-                                    className="w-full text-left p-3 rounded-lg border border-slate-100 bg-white hover:bg-slate-50 transition-all"
+                                    onClick={() => {
+                                        if (onSelectTeacher) {
+                                            onSelectTeacher(teacher.id);
+                                        } else {
+                                            setSelectedFilterTeacherId(teacher.id);
+                                            setSearchTerm('');
+                                        }
+                                    }}
+                                    className={`w-full text-left p-3 rounded-lg border transition-all ${selectedTeacherIdProp === teacher.id
+                                        ? 'bg-blue-50 border-blue-400 shadow-sm ring-1 ring-blue-400'
+                                        : 'border-slate-100 bg-white hover:bg-slate-50'
+                                        }`}
                                 >
                                     <div className="flex items-center gap-3">
                                         <div

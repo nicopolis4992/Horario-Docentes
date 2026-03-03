@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     Clock,
     GraduationCap,
@@ -15,14 +15,39 @@ import toast from 'react-hot-toast';
 import SubjectListSidebar from './SubjectListSidebar';
 import GeneratorOptions from './GeneratorOptions';
 import ActiveGroupsList from './ActiveGroupsList';
+import TeacherDetailPanel from './TeacherDetailPanel';
+
+type FilterMode = 'materias' | 'docentes';
 
 const OfferPlannerView = () => {
     const planner = useOfferPlanner();
     const { state } = planner;
 
+    const [filterMode, setFilterMode] = useState<FilterMode>('materias');
+    const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null);
+
+    const handleFilterModeChange = (mode: FilterMode) => {
+        setFilterMode(mode);
+        if (mode === 'materias') {
+            setSelectedTeacherId(null);
+        } else {
+            planner.setSelectedSubjectId(null);
+        }
+    };
+
+    const handleSelectTeacher = (teacherId: string) => {
+        setSelectedTeacherId(teacherId);
+        planner.setSelectedSubjectId(null);
+        planner.setPreviewGroups([]);
+    };
+
+    // Determine what the right panel shows
+    const showSubjectDetail = filterMode === 'materias' && planner.selectedSubject;
+    const showTeacherDetail = filterMode === 'docentes' && selectedTeacherId;
+
     return (
-        <div className="flex flex-col lg:flex-row h-[calc(100vh-100px)] gap-6 pb-20 lg:pb-0">
-            {/* LEFT: Subjects List via component */}
+        <div className="flex flex-col lg:flex-row h-full gap-6">
+            {/* LEFT: Subjects/Teachers List */}
             <SubjectListSidebar
                 selectedSubjectId={planner.selectedSubjectId}
                 onSelectSubject={(id) => {
@@ -32,19 +57,37 @@ const OfferPlannerView = () => {
                     planner.setBaseClassroomId(subject?.preferredClassroomId || '');
                 }}
                 onBulkGenerate={planner.handleBulkGenerate}
+                selectedTeacherId={selectedTeacherId}
+                onSelectTeacher={handleSelectTeacher}
+                filterMode={filterMode}
+                onFilterModeChange={handleFilterModeChange}
             />
 
             {/* RIGHT: Workspace */}
             <div className="flex-1 bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col overflow-hidden min-h-[500px]">
-                {!planner.selectedSubject ? (
+                {/* Empty state - nothing selected */}
+                {!showSubjectDetail && !showTeacherDetail && (
                     <div className="flex-1 flex flex-col items-center justify-center text-slate-400 p-8 text-center animate-fade-in">
                         <div className="bg-slate-50 p-4 rounded-full mb-4">
                             <ListTodo size={48} className="opacity-50" />
                         </div>
                         <h3 className="text-lg font-bold text-slate-600">Planificador de Oferta</h3>
-                        <p className="max-w-md">Selecciona una materia de la izquierda para comenzar a definir cuántos paralelos abrir y qué docentes asignarlos.</p>
+                        <p className="max-w-md">
+                            {filterMode === 'materias'
+                                ? 'Selecciona una materia de la izquierda para comenzar a definir cuántos paralelos abrir y qué docentes asignarlos.'
+                                : 'Selecciona un docente de la izquierda para ver su resumen y paralelos asignados.'
+                            }
+                        </p>
                     </div>
-                ) : (
+                )}
+
+                {/* Teacher Detail Panel (Docentes mode) */}
+                {showTeacherDetail && selectedTeacherId && (
+                    <TeacherDetailPanel teacherId={selectedTeacherId} />
+                )}
+
+                {/* Subject Detail Panel (Materias mode) */}
+                {showSubjectDetail && planner.selectedSubject && (
                     <div className="flex flex-col h-full animate-fade-in">
                         {/* Header Details */}
                         <div className="p-6 border-b border-slate-100 bg-white">

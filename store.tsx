@@ -32,6 +32,11 @@ type Action =
   | { type: 'CLEAR_ALL_ASSIGNMENTS' }
   | { type: 'CLEAR_TEACHER_ASSIGNMENTS'; payload: string } // teacherId
   | { type: 'CLEAR_CLASSROOM_ASSIGNMENTS'; payload: string } // classroomId
+  | { type: 'LOAD_STATE'; payload: AppState }
+  // Bulk Set (For Import Replace Feature)
+  | { type: 'BULK_SET_TEACHERS'; payload: Teacher[] }
+  | { type: 'BULK_SET_SUBJECTS'; payload: Subject[] }
+  | { type: 'BULK_SET_CLASSROOMS'; payload: Classroom[] }
   // System
   | { type: 'RESET_DATA' };
 
@@ -63,6 +68,12 @@ const appReducer = (state: AppState, action: Action): AppState => {
         teachers: state.teachers.filter((t) => t.id !== action.payload),
         assignments: state.assignments.filter(a => a.teacherId !== action.payload)
       };
+    case 'BULK_SET_TEACHERS':
+      return {
+        ...state,
+        teachers: action.payload,
+        assignments: state.assignments.filter(a => action.payload.some(t => t.id === a.teacherId))
+      };
 
     // --- Classrooms ---
     case 'ADD_CLASSROOM':
@@ -79,6 +90,12 @@ const appReducer = (state: AppState, action: Action): AppState => {
         ...state,
         classrooms: state.classrooms.filter((c) => c.id !== action.payload),
         assignments: state.assignments.filter(a => a.classroomId !== action.payload)
+      };
+    case 'BULK_SET_CLASSROOMS':
+      return {
+        ...state,
+        classrooms: action.payload,
+        assignments: state.assignments.filter(a => action.payload.some(c => c.id === a.classroomId))
       };
 
     // --- Subjects ---
@@ -97,6 +114,13 @@ const appReducer = (state: AppState, action: Action): AppState => {
         subjects: state.subjects.filter((s) => s.id !== action.payload),
         courseGroups: state.courseGroups.filter((g) => g.subjectId !== action.payload),
         assignments: state.assignments.filter(a => a.subjectId !== action.payload)
+      };
+    case 'BULK_SET_SUBJECTS':
+      return {
+        ...state,
+        subjects: action.payload,
+        courseGroups: state.courseGroups.filter((g) => action.payload.some(s => s.id === g.subjectId)),
+        assignments: state.assignments.filter(a => action.payload.some(s => s.id === a.subjectId))
       };
 
     // --- Course Groups ---
@@ -175,6 +199,8 @@ const appReducer = (state: AppState, action: Action): AppState => {
       };
 
     // --- System ---
+    case 'LOAD_STATE':
+      return action.payload;
     case 'RESET_DATA':
       return {
         ...MOCK_INITIAL_DATA,

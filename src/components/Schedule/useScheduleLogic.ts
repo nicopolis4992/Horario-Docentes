@@ -496,46 +496,53 @@ export const useScheduleLogic = () => {
     };
 
     const handleAutoAssignAll = () => {
-        // Helper: find best classroom for a subject, prioritizing allowedClassroomIds
+        const newAssignments: ScheduleAssignment[] = [];
+
+        // Build all pending groups
+        const allPendingGroups = state.courseGroups.map(group => {
+            const assignedCount = state.assignments.filter(a => a.courseGroupId === group.id).length;
+            return { ...group, remaining: group.totalHours - assignedCount };
+        }).filter(g => g.remaining > 0);
+
+        // Shared tracking sets (mutated across all passes)
+        const occupiedSlots = new Set<string>(state.assignments.map(a => `${a.day}-${a.timeSlotId}-${a.teacherId}`));
+        const occupiedRooms = new Set<string>(state.assignments.map(a => `${a.day}-${a.timeSlotId}-${a.classroomId}`));
+
+        // ── findBestClassroom: picks the best available room for a subject+slot ──
         const findBestClassroom = (
             subject: { allowedClassroomIds?: string[]; allowedClassroomTypes?: ClassroomType[] },
             slotId: string,
             day: DayOfWeek,
-            occupiedRooms: Set<string>
+            preferredRoomId?: string
         ): string | null => {
-            // Priority 1: Try specific allowed classrooms first
+            // Priority 1: specific allowed classrooms (from Materias config)
             if (subject.allowedClassroomIds && subject.allowedClassroomIds.length > 0) {
                 for (const cId of subject.allowedClassroomIds) {
-                    const slotKey = `${day}-${slotId}-${cId}`;
-                    if (!occupiedRooms.has(slotKey)) return cId;
+                    if (!occupiedRooms.has(`${day}-${slotId}-${cId}`)) return cId;
                 }
             }
-            // Priority 2: Try any classroom matching allowed types
+            // Priority 2: try the planned/preferred room if given
+            if (preferredRoomId && !occupiedRooms.has(`${day}-${slotId}-${preferredRoomId}`)) {
+                return preferredRoomId;
+            }
+            // Priority 3: any room matching allowed types
             if (subject.allowedClassroomTypes && subject.allowedClassroomTypes.length > 0) {
                 for (const c of state.classrooms) {
                     if (subject.allowedClassroomTypes.includes(c.type)) {
-                        const slotKey = `${day}-${slotId}-${c.id}`;
-                        if (!occupiedRooms.has(slotKey)) return c.id;
+                        if (!occupiedRooms.has(`${day}-${slotId}-${c.id}`)) return c.id;
                     }
                 }
             }
             return null;
         };
 
-        const newAssignments: ScheduleAssignment[] = [];
-
-        const allPendingGroups = state.courseGroups.map(group => {
-            const assignedCount = state.assignments.filter(a => a.courseGroupId === group.id).length;
-            return {
-                ...group,
-                remaining: group.totalHours - assignedCount
-            };
-        }).filter(g => g.remaining > 0);
-
-        const occupiedSlots = new Set<string>(state.assignments.map(a => `${a.day}-${a.timeSlotId}-${a.teacherId}`));
-        const occupiedRooms = new Set<string>(state.assignments.map(a => `${a.day}-${a.timeSlotId}-${a.classroomId}`));
-
-        allPendingGroups.forEach(group => {
+        // ── tryAssignGroup: attempts to place a group on the schedule ──
+        // mode: 'mandatory' = MUST use allowedClassroomIds (fail if none free)
+        //        'flexible'  = try preferredRoom, then any compatible, skip if nothing
+        const tryAssignGroup = (
+            group: typeof allPendingGroups[0],
+            mode: 'mandatory' | 'flexible'
+        ) => {
             const subject = state.subjects.find(s => s.id === group.subjectId);
             if (!subject) return;
 
@@ -545,17 +552,15 @@ export const useScheduleLogic = () => {
 
             const teacher = state.teachers.find(t => t.id === teacherId);
             const preferredDays = subject.preferredDays && subject.preferredDays.length > 0 ? subject.preferredDays : WEEKDAYS;
-
             let assigned = false;
 
-            const sortedPreferredDays = [...preferredDays].sort((a, b) => {
-                const slotsArray = Array.from(occupiedSlots as Set<string>);
-                const countA = slotsArray.filter(k => k.startsWith(`${a}-`)).length;
-                const countB = slotsArray.filter(k => k.startsWith(`${b}-`)).length;
-                return countA - countB;
+            // Sort days by least-occupied first
+            const sortedDays = [...preferredDays].sort((a, b) => {
+                const arr = Array.from(occupiedSlots);
+                return arr.filter(k => k.startsWith(`${a}-`)).length - arr.filter(k => k.startsWith(`${b}-`)).length;
             });
 
-            for (const day of sortedPreferredDays) {
+            for (const day of sortedDays) {
                 if (assigned) break;
 
                 for (let i = 0; i <= timeSlots.length - hoursToAssign; i++) {
@@ -563,45 +568,94 @@ export const useScheduleLogic = () => {
 
                     let canFit = true;
                     const potentialSlots: string[] = [];
+                    const slotClassrooms: string[] = []; // classroom chosen per slot
 
                     for (let j = 0; j < hoursToAssign; j++) {
                         const slot = timeSlots[i + j];
                         const slotKey = `${day}-${slot.id}`;
 
-                        const teacherBusy = occupiedSlots.has(`${slotKey}-${teacherId}`) ||
-                            teacher?.unavailableSlots?.includes(slotKey);
+                        // 1. Jornada
+                        if (subject.jornada === 'vespertina' && slot.start < '17:50') { canFit = false; break; }
+                        if (subject.jornada === 'diurna' && slot.start >= '17:50') { canFit = false; break; }
 
-                        const roomBusy = group.plannedClassroomId &&
-                            occupiedRooms.has(`${slotKey}-${group.plannedClassroomId}`);
-
-                        if (teacherBusy || roomBusy) {
-                            canFit = false;
-                            break;
+                        // 2. Time range
+                        if (subject.preferredTimeRange) {
+                            if (slot.start < subject.preferredTimeRange.start || slot.end > subject.preferredTimeRange.end) {
+                                canFit = false; break;
+                            }
                         }
+
+                        // 3. Teacher availability
+                        if (occupiedSlots.has(`${slotKey}-${teacherId}`) || teacher?.unavailableSlots?.includes(slotKey)) {
+                            canFit = false; break;
+                        }
+
+                        // 4. Room availability — pick a room dynamically
+                        let roomId: string | null = null;
+
+                        if (mode === 'mandatory') {
+                            // Must use one of the allowedClassroomIds
+                            if (subject.allowedClassroomIds) {
+                                for (const cId of subject.allowedClassroomIds) {
+                                    if (!occupiedRooms.has(`${slotKey}-${cId}`)) { roomId = cId; break; }
+                                }
+                            }
+                            if (!roomId) { canFit = false; break; }
+                        } else {
+                            // Flexible: try planned room → then any compatible room
+                            roomId = findBestClassroom(subject, slot.id, day, group.plannedClassroomId || undefined);
+                            if (!roomId) { canFit = false; break; }
+                        }
+
                         potentialSlots.push(slot.id);
+                        slotClassrooms.push(roomId);
                     }
 
-                    if (canFit) {
-                        potentialSlots.forEach(slotId => {
-                            const aId = crypto.randomUUID();
+                    if (canFit && potentialSlots.length === hoursToAssign) {
+                        potentialSlots.forEach((slotId, idx) => {
                             const payload = {
-                                id: aId,
+                                id: crypto.randomUUID(),
                                 day: day,
                                 timeSlotId: slotId,
                                 subjectId: group.subjectId,
                                 teacherId: teacherId,
-                                classroomId: group.plannedClassroomId || findBestClassroom(subject, slotId, day, occupiedRooms) || state.classrooms[0]?.id || '',
+                                classroomId: slotClassrooms[idx],
                                 courseGroupId: group.id
                             };
                             newAssignments.push(payload);
                             occupiedSlots.add(`${day}-${slotId}-${teacherId}`);
-                            if (payload.classroomId) occupiedRooms.add(`${day}-${slotId}-${payload.classroomId}`);
+                            occupiedRooms.add(`${day}-${slotId}-${payload.classroomId}`);
                         });
                         assigned = true;
                     }
                 }
             }
+        };
+
+        // ── Split groups into passes ──
+        const pass1: typeof allPendingGroups = []; // mandatory classroom (allowedClassroomIds)
+        const pass2: typeof allPendingGroups = []; // planned classroom (plannedClassroomId from offer)
+        const pass3: typeof allPendingGroups = []; // everything else
+
+        allPendingGroups.forEach(g => {
+            const subject = state.subjects.find(s => s.id === g.subjectId);
+            if (subject?.allowedClassroomIds && subject.allowedClassroomIds.length > 0) {
+                pass1.push(g);
+            } else if (g.plannedClassroomId) {
+                pass2.push(g);
+            } else {
+                pass3.push(g);
+            }
         });
+
+        // ====== PASS 1: Mandatory classrooms ======
+        pass1.forEach(g => tryAssignGroup(g, 'mandatory'));
+
+        // ====== PASS 2: Planned classroom with fallback to compatible types ======
+        pass2.forEach(g => tryAssignGroup(g, 'flexible'));
+
+        // ====== PASS 3: Any compatible classroom ======
+        pass3.forEach(g => tryAssignGroup(g, 'flexible'));
 
         if (newAssignments.length > 0) {
             newAssignments.forEach(a => dispatch({ type: 'ADD_ASSIGNMENT', payload: a }));

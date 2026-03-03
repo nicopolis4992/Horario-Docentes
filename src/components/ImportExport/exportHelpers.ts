@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
+import JSZip from 'jszip';
 import { AppState } from '../../../types';
 import { generateTimeSlots, DAY_NUMBER_MAP, getBlockCode } from '../../../utils';
 
@@ -48,29 +49,33 @@ export const generateExportData = (state: AppState) => {
             teacher = state.teachers.find(t => t.id === group.teacherId);
         }
 
+        // Extract numeric parallel from group name (e.g., "Paralelo 1" -> "1")
+        const parallelMatch = group.name.match(/\d+/);
+        const paraleloStr = parallelMatch ? parallelMatch[0] : (group.name || '');
+
         return {
-            'camp_code': subject?.sede || 'UP',
-            'banner_id_principal': teacher?.institutionalId || '',
-            'id_instructor_secundario': '(VACIO)',
-            'id_instructor_terciario': '(VACIO)',
-            'id_instructor_cuaternario': '(VACIO)',
-            'id_instructor_quinario': '(VACIO)',
-            'matri_o_periodo': subject?.semester || '',
+            'row_index': '',
+            'carrera_code': '',
+            'carrera_name': subject?.carrera || 'MULTIMEDIA Y PROD.AUDIOVISUAL',
+            'sede': subject?.sede || 'UP',
+            'asignatura': subject?.name || 'Materia sin nombre',
             'sigla': subject?.sigla || '',
-            'tipo': firstRoom?.type || '',
-            'seccion': group.name,
-            'nrc': '(VACIO)',
+            'creditos': subject?.credits || 0,
+            'nivel': subject?.semester || '',
+            'bloque': '',
+            'paralelo': paraleloStr,
+            'banner_id_principal': teacher?.institutionalId || '',
+            'banner_id_secundario': '',
+            'banner_id_tercero': '',
             'cupo': group.studentCount || subject?.projectedStudents || 0,
-            'listacruzada': '(VACIO)',
-            'matu_vesp': firstSlot ? (isDiurno ? 'Diurno' : 'Vespertino') : '',
-            'carrera': subject?.carrera || 'MULTIMEDIA Y PROD.AUDIOVISUAL',
-            'p1': '(VACIO)',
+            'matu_vesp': firstSlot ? (isDiurno ? 'D' : 'V') : '',
+            'virtual': '',
+            'need_aula': 'TRUE',
+            'tipo': firstRoom?.type || '',
             'nume_sala': firstRoom?.name || '',
+            'teor': 'TEO',
+            'carpeta_linea': 'TRUE',
             'h1': firstSlotCode,
-            'f1': '(VACIO)',
-            'w1': '(VACIO)',
-            'cred_progra': subject?.credits || 0,
-            'sesion_dictado': '(VACIO)'
         };
     });
 };
@@ -147,4 +152,49 @@ export const captureToPDF = async (elementId: string, doc: jsPDF, isFirstPage: b
     const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
     doc.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+};
+
+/**
+ * Captures multiple HTML elements and packages them into a ZIP file.
+ */
+export const captureAllAsZip = async (items: { id: string, name: string }[], filename: string) => {
+    const zip = new JSZip();
+    const folder = zip.folder(filename);
+
+    if (!folder) throw new Error("Could not create ZIP folder");
+
+    for (const item of items) {
+        const element = document.getElementById(`print-grid-${item.id}`);
+        if (!element) continue;
+
+        const canvas = await html2canvas(element, {
+            scale: 2,
+            backgroundColor: '#ffffff',
+            logging: false
+        });
+
+        // Get base64 data without the data URI prefix
+        const imgData = canvas.toDataURL('image/png').split(',')[1];
+        folder.file(`${item.name.replace(/[\/\?<>\\:\*\|":]/g, '_')}.png`, imgData, { base64: true });
+    }
+
+    const content = await zip.generateAsync({ type: 'blob' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(content);
+    link.download = `${filename}.zip`;
+    link.click();
+};
+
+/**
+ * Downloads the entire application state as a JSON file.
+ */
+export const downloadProjectJSON = (state: AppState, filename: string) => {
+    const jsonStr = JSON.stringify(state, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename.endsWith('.json') ? filename : `${filename}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
 };

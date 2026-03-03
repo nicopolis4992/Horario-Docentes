@@ -76,7 +76,7 @@ const ScheduleGrid = () => {
                 {/* Headers */}
                 <div
                     style={{ gridTemplateColumns: `80px repeat(${visibleDays.length}, minmax(0, 1fr))` }}
-                    className="grid border-b-2 border-slate-200 bg-slate-50 sticky top-0 z-10 rounded-t-xl shrink-0"
+                    className="grid border-b-2 border-slate-200 bg-slate-50 sticky top-0 z-20 rounded-t-xl shrink-0"
                 >
                     <div className="p-3 border-r border-slate-200 font-bold text-slate-500 text-center text-sm shadow-[1px_0_0_0_#f1f5f9]">Hora</div>
                     {visibleDays.map(day => (
@@ -87,7 +87,7 @@ const ScheduleGrid = () => {
                 </div>
 
                 {/* Grid Body */}
-                <div className="bg-slate-50 overflow-y-auto w-full relative">
+                <div className="bg-slate-50 w-full relative">
                     <div
                         style={{ gridTemplateColumns: `80px repeat(${visibleDays.length}, minmax(0, 1fr))` }}
                         className="grid min-h-max"
@@ -116,9 +116,14 @@ const ScheduleGrid = () => {
                                 dayAssignments = state.assignments.filter(a => a.day === day && a.classroomId === selectedClassroomId);
                             }
 
+                            // Filter out assignments that are outside the visible time range
+                            // This fixes the bug where morning blocks appear at the top in vespertina view
+                            const timeSlotIds = new Set(visibleTimeSlots.map(s => s.id));
+                            const visibleAssignments = dayAssignments.filter(a => timeSlotIds.has(a.timeSlotId));
+
                             // Calculate contiguous blocks for visual rendering
                             const blocks: any[] = [];
-                            const sorted = [...dayAssignments].sort((a, b) => {
+                            const sorted = [...visibleAssignments].sort((a, b) => {
                                 // Primary sort: group by courseGroupId so contiguous merging works correctly
                                 const groupCompare = (a.courseGroupId || '').localeCompare(b.courseGroupId || '');
                                 if (groupCompare !== 0) return groupCompare;

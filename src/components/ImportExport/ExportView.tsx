@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { Download, FileSpreadsheet, Image as ImageIcon, FileText, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Download, FileSpreadsheet, Image as ImageIcon, FileText, CheckCircle2, AlertTriangle, Save } from 'lucide-react';
 import { useAppStore } from '../../../store';
-import { generateExportData, downloadCSV, downloadXLSX, captureAndDownloadImage, captureToPDF } from './exportHelpers';
+import { generateExportData, downloadCSV, downloadXLSX, captureAndDownloadImage, captureToPDF, captureAllAsZip, downloadProjectJSON } from './exportHelpers';
 import { jsPDF } from 'jspdf';
 import { DAYS } from '../Schedule/useScheduleLogic';
 import { generateTimeSlots, AREA_CONFIG } from '../../../utils';
@@ -9,7 +9,15 @@ import toast from 'react-hot-toast';
 
 const PrintableGrid: React.FC<{ resourceId: string, resourceType: 'teacher' | 'classroom' }> = ({ resourceId, resourceType }) => {
     const { state } = useAppStore();
-    const timeSlots = generateTimeSlots();
+    const timeSlotsAll = generateTimeSlots();
+
+    // Smart Diurno/Vespertino filter
+    const resourceAssignments = state.assignments.filter(a => resourceType === 'teacher' ? a.teacherId === resourceId : a.classroomId === resourceId);
+    const hasVespertina = resourceAssignments.some(a => {
+        const slot = timeSlotsAll.find(s => s.id === a.timeSlotId);
+        return slot && slot.start >= '17:50';
+    });
+    const timeSlots = hasVespertina ? timeSlotsAll : timeSlotsAll.filter(s => s.start < '17:50');
 
     return (
         <div id={`print-grid-${resourceId}`} className="bg-white" style={{ width: '1000px', padding: '20px' }}>
@@ -157,9 +165,9 @@ const ExportView = () => {
         toast.success(`Datos descargados en formato ${format.toUpperCase()}`);
     };
 
-    const handleVisualExport = async (format: 'png' | 'pdf') => {
+    const handleVisualExport = async (format: 'png' | 'pdf' | 'png-zip') => {
         if (!selectedId && format === 'png') {
-            toast.error('Seleccione un recurso para exportar.');
+            toast.error('Seleccione un recurso para exportar PNG individual.');
             return;
         }
 
@@ -197,6 +205,10 @@ const ExportView = () => {
 
                 doc.save(`Horarios_${exportType === 'teacher' ? 'Docentes' : 'Aulas'}.pdf`);
                 toast.success('PDF generado exitosamente.', { id: toastId });
+            } else if (format === 'png-zip') {
+                const itemsToExport = exportType === 'teacher' ? state.teachers : state.classrooms;
+                await captureAllAsZip(itemsToExport.map(i => ({ id: i.id, name: i.name })), `Horarios_${exportType === 'teacher' ? 'Docentes' : 'Aulas'}`);
+                toast.success(`Se exportaron ${itemsToExport.length} imágenes en ZIP.`, { id: toastId });
             }
         } catch (error: any) {
             toast.error(`Error al exportar: ${error.message}`, { id: toastId });
@@ -223,7 +235,33 @@ const ExportView = () => {
                 </div>
             )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+
+                {/* Guardar Proyecto Completo */}
+                <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl shadow-sm border border-indigo-100 p-6 space-y-6 lg:col-span-2">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg">
+                                <Save size={24} />
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-lg text-slate-800">Guardar Proyecto</h3>
+                                <p className="text-sm text-slate-600">Descarga un archivo JSON con todos los datos (docentes, materias, aulas y horarios) para continuar después.</p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => {
+                                const date = new Date().toISOString().split('T')[0];
+                                downloadProjectJSON(state, `proyecto_horarios_${date}.json`);
+                                toast.success('Proyecto guardado correctamente.');
+                            }}
+                            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-bold transition-colors shadow-sm"
+                        >
+                            <Save size={18} />
+                            Guardar Archivo .JSON
+                        </button>
+                    </div>
+                </div>
 
                 {/* Exportar Datos */}
                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-6">
@@ -314,18 +352,30 @@ const ExportView = () => {
                         </div>
 
                         <div className="flex gap-4 pt-2">
-                            <button
-                                onClick={() => handleVisualExport('png')}
-                                disabled={!selectedId || hasErrors}
-                                className={`flex-1 flex flex-col items-center justify-center gap-2 px-4 py-4 rounded-lg font-bold transition-colors border ${!selectedId || hasErrors
-                                    ? 'bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed opacity-50'
-                                    : 'bg-white hover:bg-slate-50 border-slate-300 text-slate-700 shadow-sm'
-                                    }`}
-                            >
-                                <ImageIcon size={24} />
-                                <span>Descargar PNG</span>
-                                <span className="text-[10px] uppercase font-normal text-slate-500">Solo el seleccionado</span>
-                            </button>
+                            <div className="flex flex-col flex-1 gap-2">
+                                <button
+                                    onClick={() => handleVisualExport('png')}
+                                    disabled={!selectedId || hasErrors}
+                                    className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-bold transition-colors border ${!selectedId || hasErrors
+                                        ? 'bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed opacity-50'
+                                        : 'bg-white hover:bg-slate-50 border-slate-300 text-slate-700 shadow-sm'
+                                        }`}
+                                >
+                                    <ImageIcon size={18} />
+                                    <span className="text-sm">PNG (1)</span>
+                                </button>
+                                <button
+                                    onClick={() => handleVisualExport('png-zip')}
+                                    disabled={hasErrors}
+                                    className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-bold transition-colors shadow-sm ${hasErrors
+                                        ? 'bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed opacity-50'
+                                        : 'bg-slate-800 hover:bg-slate-900 text-white'
+                                        }`}
+                                >
+                                    <ImageIcon size={18} />
+                                    <span className="text-sm">ZIP (Todos)</span>
+                                </button>
+                            </div>
                             <button
                                 onClick={() => handleVisualExport('pdf')}
                                 disabled={hasErrors}

@@ -1,30 +1,31 @@
 <!DOCTYPE html>
-<html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gestor de Horarios Académicos</title>
-    <!-- PWA Settings -->
-    <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#2563EB" />
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    
-    <!-- Tailwind CSS for MVP styling -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              primary: '#2563EB',
-              secondary: '#475569',
-            }
+<html lang="es" style="zoom: 0.85; height: 100%; overflow: hidden">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gestor de Horarios Académicos</title>
+  <!-- PWA Settings -->
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#2563EB" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <!-- Tailwind CSS for MVP styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#2563EB',
+            secondary: '#475569',
           }
         }
       }
-    </script>
+    }
+  </script>
   <script type="importmap">
 {
   "imports": {
@@ -36,17 +37,19 @@
 }
 </script>
 </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
-    <script>
-      if ('serviceWorker' in navigator) {
-        // Simple no-op service worker registration for PWA installability criteria
-        // In a real build step, Vite would generate a sw.js
-        navigator.serviceWorker.register('data:application/javascript;base64,c2VsZi5hZGRFdmVudExpc3RlbmVyKCdZZXRjaCcsICgpID0+IHt9KTs=')
-          .then(() => console.log('SW Registered'))
-          .catch(() => console.log('SW Failed'));
-      }
-    </script>
-  </body>
+
+<body style="margin: 0; height: 100%; overflow: hidden">
+  <div id="root" style="height: 100%"></div>
+  <script type="module" src="/index.tsx"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      // Simple no-op service worker registration for PWA installability criteria
+      // In a real build step, Vite would generate a sw.js
+      navigator.serviceWorker.register('data:application/javascript;base64,c2VsZi5hZGRFdmVudExpc3RlbmVyKCdZZXRjaCcsICgpID0+IHt9KTs=')
+        .then(() => console.log('SW Registered'))
+        .catch(() => console.log('SW Failed'));
+    }
+  </script>
+</body>
+
 </html>

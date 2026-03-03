@@ -41,7 +41,7 @@ const ActiveGroupsList = ({
                             payload: {
                                 id: crypto.randomUUID(),
                                 subjectId: subjectId,
-                                name: `Nuevo Grupo`,
+                                name: `Paralelo ${groups.length + 1}`,
                                 studentCount: 0,
                                 totalHours: subjectCredits,
                                 plannedClassroomId: ''

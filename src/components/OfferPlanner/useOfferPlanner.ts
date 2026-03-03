@@ -36,9 +36,23 @@ export const useOfferPlanner = () => {
         let rooms = [] as typeof state.classrooms;
 
         if (subject.allowedClassroomIds && subject.allowedClassroomIds.length > 0) {
+            // Subject requests specific classrooms — use only those
             rooms = state.classrooms.filter(c => subject.allowedClassroomIds?.includes(c.id));
         } else if (subject.allowedClassroomTypes && subject.allowedClassroomTypes.length > 0) {
-            rooms = state.classrooms.filter(c => subject.allowedClassroomTypes?.includes(c.type));
+            // Subject requests classroom TYPES — exclude classrooms reserved by other subjects
+            const reservedByOthers = new Set<string>();
+            state.subjects.forEach(s => {
+                if (s.id !== subject.id && s.allowedClassroomIds && s.allowedClassroomIds.length > 0) {
+                    s.allowedClassroomIds.forEach(id => reservedByOthers.add(id));
+                }
+            });
+            rooms = state.classrooms.filter(c =>
+                subject.allowedClassroomTypes?.includes(c.type) && !reservedByOthers.has(c.id)
+            );
+            // Fallback: if no non-reserved rooms of this type exist, include reserved ones
+            if (rooms.length === 0) {
+                rooms = state.classrooms.filter(c => subject.allowedClassroomTypes?.includes(c.type));
+            }
         } else {
             rooms = [...state.classrooms];
         }
@@ -54,11 +68,6 @@ export const useOfferPlanner = () => {
 
         if (eligibleTeachers.length > 0) {
             suggestedTeacherId = eligibleTeachers[0].id;
-        } else {
-            const anyTeachers = [...state.teachers].sort((a, b) =>
-                getTeacherTotalLoad(a.id) - getTeacherTotalLoad(b.id)
-            );
-            suggestedTeacherId = anyTeachers[0]?.id;
         }
 
         const eligibleRooms = getEligibleRooms(subject);
@@ -95,7 +104,7 @@ export const useOfferPlanner = () => {
             newGroups.push({
                 id: crypto.randomUUID(),
                 subjectId: selectedSubject.id,
-                name: `Paralelo ${i + 1}`,
+                name: `Paralelo ${existingGroups.length + i + 1}`,
                 studentCount: count,
                 totalHours: selectedSubject.credits,
                 plannedClassroomId: assignedRoom.id,
@@ -173,6 +182,8 @@ export const useOfferPlanner = () => {
 
             let studentsRemaining = totalStudents;
 
+            const existingCount = state.courseGroups.filter(g => g.subjectId === subject.id).length;
+
             for (let i = 0; i < numberOfGroups; i++) {
                 const count = Math.min(capacity, studentsRemaining);
                 studentsRemaining -= count;
@@ -185,7 +196,7 @@ export const useOfferPlanner = () => {
                 allNewGroups.push({
                     id: crypto.randomUUID(),
                     subjectId: subject.id,
-                    name: `Paralelo ${i + 1}`,
+                    name: `Paralelo ${existingCount + i + 1}`,
                     studentCount: count,
                     totalHours: subject.credits,
                     plannedClassroomId: assignedRoom.id,
