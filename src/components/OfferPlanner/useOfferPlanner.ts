@@ -47,20 +47,18 @@ export const useOfferPlanner = () => {
     };
 
     const suggestTeacherAndRoom = (subject: Subject) => {
-        let suggestedTeacherId = subject.preferredTeacherId;
-        if (!suggestedTeacherId) {
-            const eligibleTeachers = state.teachers.filter(t =>
-                t.allowedSubjectIds?.includes(subject.id)
-            ).sort((a, b) => getTeacherTotalLoad(a.id) - getTeacherTotalLoad(b.id));
+        let suggestedTeacherId: string | undefined = undefined;
+        const eligibleTeachers = state.teachers.filter(t =>
+            t.allowedSubjectIds?.includes(subject.id)
+        ).sort((a, b) => getTeacherTotalLoad(a.id) - getTeacherTotalLoad(b.id));
 
-            if (eligibleTeachers.length > 0) {
-                suggestedTeacherId = eligibleTeachers[0].id;
-            } else {
-                const anyTeachers = [...state.teachers].sort((a, b) =>
-                    getTeacherTotalLoad(a.id) - getTeacherTotalLoad(b.id)
-                );
-                suggestedTeacherId = anyTeachers[0]?.id;
-            }
+        if (eligibleTeachers.length > 0) {
+            suggestedTeacherId = eligibleTeachers[0].id;
+        } else {
+            const anyTeachers = [...state.teachers].sort((a, b) =>
+                getTeacherTotalLoad(a.id) - getTeacherTotalLoad(b.id)
+            );
+            suggestedTeacherId = anyTeachers[0]?.id;
         }
 
         const eligibleRooms = getEligibleRooms(subject);

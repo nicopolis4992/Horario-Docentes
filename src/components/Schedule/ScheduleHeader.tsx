@@ -1,5 +1,5 @@
 import React from 'react';
-import { CalendarDays, Filter, Users, School, Sparkles, CheckCircle2, Trash2, Sidebar, SidebarClose, AlertTriangle } from 'lucide-react';
+import { CalendarDays, Filter, Users, School, Sparkles, CheckCircle2, Trash2, Sidebar, SidebarClose, AlertTriangle, Sun, Moon, SunMoon } from 'lucide-react';
 import { useScheduleContext } from './ScheduleContext';
 import toast from 'react-hot-toast';
 
@@ -98,30 +98,38 @@ const ScheduleHeader = () => {
 
                     {/* Schedule Filters */}
                     <div className="hidden sm:flex items-center gap-3 border-l-2 border-slate-200 pl-6 shrink-0">
-                        <select
-                            value={scheduleFilter}
-                            onChange={(e) => setScheduleFilter(e.target.value as 'all' | 'diurno' | 'vespertino')}
-                            className="bg-white border border-slate-300 text-slate-700 text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium cursor-pointer shadow-sm hover:border-slate-400 transition-colors"
-                        >
-                            <option value="all">Todo el Día (7:00 - 21:50)</option>
-                            <option value="diurno">Diurno (hasta 17:45)</option>
-                            <option value="vespertino">Vespertino (desde 17:50)</option>
-                        </select>
-
                         <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200 shadow-sm">
                             <button
-                                onClick={() => setWeekMode('workweek')}
-                                className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${weekMode === 'workweek' ? 'bg-white text-blue-700 shadow border border-slate-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+                                onClick={() => setScheduleFilter('diurno')}
+                                title="Diurno (hasta 17:45)"
+                                className={`p-1.5 rounded-md transition-all ${scheduleFilter === 'diurno' ? 'bg-white text-amber-500 shadow border border-slate-200' : 'text-slate-400 hover:text-amber-500 hover:bg-slate-200/50'}`}
                             >
-                                Lun-Vie
+                                <Sun size={18} />
                             </button>
                             <button
-                                onClick={() => setWeekMode('fullweek')}
-                                className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${weekMode === 'fullweek' ? 'bg-white text-blue-700 shadow border border-slate-200' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+                                onClick={() => setScheduleFilter('vespertino')}
+                                title="Vespertino (desde 17:50)"
+                                className={`p-1.5 rounded-md transition-all ${scheduleFilter === 'vespertino' ? 'bg-white text-indigo-500 shadow border border-slate-200' : 'text-slate-400 hover:text-indigo-500 hover:bg-slate-200/50'}`}
                             >
-                                Lun-Sáb
+                                <Moon size={18} />
+                            </button>
+                            <button
+                                onClick={() => setScheduleFilter('all')}
+                                title="Todo el Día"
+                                className={`p-1.5 rounded-md transition-all ${scheduleFilter === 'all' ? 'bg-white text-blue-600 shadow border border-slate-200' : 'text-slate-400 hover:text-blue-600 hover:bg-slate-200/50'}`}
+                            >
+                                <SunMoon size={18} />
                             </button>
                         </div>
+
+                        <select
+                            value={weekMode}
+                            onChange={(e) => setWeekMode(e.target.value as 'workweek' | 'fullweek')}
+                            className="bg-white border border-slate-300 text-slate-700 text-sm rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium cursor-pointer shadow-sm hover:border-slate-400 transition-colors"
+                        >
+                            <option value="workweek">Lun-Vie</option>
+                            <option value="fullweek">Lun-Sáb</option>
+                        </select>
                     </div>
                 </div>
 

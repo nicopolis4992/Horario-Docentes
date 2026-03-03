@@ -123,6 +123,15 @@ export const CLASSROOM_CONFIG: Record<ClassroomType, { label: string; color: str
   }
 };
 
+// Configurable dropdown lists
+export const CARRERAS: string[] = [
+  'MULTIMEDIA Y PROD.AUDIOVISUAL',
+];
+
+export const SEDES: string[] = [
+  'UP',
+];
+
 export const MOCK_INITIAL_DATA = {
   teachers: [
     { id: 't1', name: 'Ana García', maxHours: 21, color: '#3B82F6', unavailableSlots: [], allowedSubjectIds: ['s1', 's4', 's9'] },

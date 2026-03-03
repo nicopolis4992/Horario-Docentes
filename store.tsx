@@ -204,6 +204,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const parsed = JSON.parse(localData);
       // Migration: Ensure courseGroups exists if loading old data
       if (!parsed.courseGroups) parsed.courseGroups = [];
+
+      // Migration: Update old classroom types
+      if (parsed.classrooms) {
+        parsed.classrooms = parsed.classrooms.map((c: any) => {
+          if (c.type === 'Aula') return { ...c, type: 'AULA' };
+          if (c.type === 'Lab PC') return { ...c, type: 'PC' };
+          if (c.type === 'Lab Mac') return { ...c, type: 'MAC' };
+          return c;
+        });
+      }
+
+      // Migration: Update old allowedClassroomTypes in subjects
+      if (parsed.subjects) {
+        parsed.subjects = parsed.subjects.map((s: any) => {
+          if (s.allowedClassroomTypes) {
+            s.allowedClassroomTypes = s.allowedClassroomTypes.map((t: string) => {
+              if (t === 'Aula') return 'AULA';
+              if (t === 'Lab PC') return 'PC';
+              if (t === 'Lab Mac') return 'MAC';
+              return t;
+            });
+          }
+          return s;
+        });
+      }
+
       return parsed;
     }
     return { ...MOCK_INITIAL_DATA, courseGroups: [] };

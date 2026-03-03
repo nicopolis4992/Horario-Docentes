@@ -4,7 +4,8 @@ import { toast } from 'react-hot-toast';
 import {
     DayOfWeek,
     TimeSlot,
-    ScheduleAssignment
+    ScheduleAssignment,
+    ClassroomType
 } from '../../../types';
 import { generateTimeSlots } from '../../../utils';
 import { DragEndEvent, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
@@ -335,6 +336,21 @@ export const useScheduleLogic = () => {
             if (subject?.preferredDays && subject.preferredDays.length > 0 && !subject.preferredDays.includes(day)) {
                 return { valid: false, error: `El día ${day} no está entre los días preferidos para esta materia.` };
             }
+
+            // 5. Jornada Restriction (Diurna/Vespertina)
+            if (subject?.jornada === 'vespertina' && slot.start < '17:50') {
+                return { valid: false, error: 'Esta materia es vespertina y solo puede asignarse a partir de las 17:50.' };
+            }
+            if (subject?.jornada === 'diurna' && slot.start >= '17:50') {
+                return { valid: false, error: 'Esta materia es diurna y solo puede asignarse antes de las 17:50.' };
+            }
+
+            // 6. Preferred Time Range
+            if (subject?.preferredTimeRange) {
+                if (slot.start < subject.preferredTimeRange.start || slot.end > subject.preferredTimeRange.end) {
+                    return { valid: false, error: `Esta materia solo puede dictarse entre ${subject.preferredTimeRange.start} y ${subject.preferredTimeRange.end}.` };
+                }
+            }
         }
 
         return { valid: true };
@@ -480,6 +496,32 @@ export const useScheduleLogic = () => {
     };
 
     const handleAutoAssignAll = () => {
+        // Helper: find best classroom for a subject, prioritizing allowedClassroomIds
+        const findBestClassroom = (
+            subject: { allowedClassroomIds?: string[]; allowedClassroomTypes?: ClassroomType[] },
+            slotId: string,
+            day: DayOfWeek,
+            occupiedRooms: Set<string>
+        ): string | null => {
+            // Priority 1: Try specific allowed classrooms first
+            if (subject.allowedClassroomIds && subject.allowedClassroomIds.length > 0) {
+                for (const cId of subject.allowedClassroomIds) {
+                    const slotKey = `${day}-${slotId}-${cId}`;
+                    if (!occupiedRooms.has(slotKey)) return cId;
+                }
+            }
+            // Priority 2: Try any classroom matching allowed types
+            if (subject.allowedClassroomTypes && subject.allowedClassroomTypes.length > 0) {
+                for (const c of state.classrooms) {
+                    if (subject.allowedClassroomTypes.includes(c.type)) {
+                        const slotKey = `${day}-${slotId}-${c.id}`;
+                        if (!occupiedRooms.has(slotKey)) return c.id;
+                    }
+                }
+            }
+            return null;
+        };
+
         const newAssignments: ScheduleAssignment[] = [];
 
         const allPendingGroups = state.courseGroups.map(group => {
@@ -490,8 +532,8 @@ export const useScheduleLogic = () => {
             };
         }).filter(g => g.remaining > 0);
 
-        const occupiedSlots = new Set(state.assignments.map(a => `${a.day}-${a.timeSlotId}-${a.teacherId}`));
-        const occupiedRooms = new Set(state.assignments.map(a => `${a.day}-${a.timeSlotId}-${a.classroomId}`));
+        const occupiedSlots = new Set<string>(state.assignments.map(a => `${a.day}-${a.timeSlotId}-${a.teacherId}`));
+        const occupiedRooms = new Set<string>(state.assignments.map(a => `${a.day}-${a.timeSlotId}-${a.classroomId}`));
 
         allPendingGroups.forEach(group => {
             const subject = state.subjects.find(s => s.id === group.subjectId);
@@ -548,7 +590,7 @@ export const useScheduleLogic = () => {
                                 timeSlotId: slotId,
                                 subjectId: group.subjectId,
                                 teacherId: teacherId,
-                                classroomId: group.plannedClassroomId || state.classrooms[0]?.id || '',
+                                classroomId: group.plannedClassroomId || findBestClassroom(subject, slotId, day, occupiedRooms) || state.classrooms[0]?.id || '',
                                 courseGroupId: group.id
                             };
                             newAssignments.push(payload);

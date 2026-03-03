@@ -14,9 +14,12 @@ import {
     Users,
     School,
     Settings,
-    Check
+    Check,
+    ChevronDown,
+    Sun,
+    Moon
 } from 'lucide-react';
-import { AREA_CONFIG, CLASSROOM_CONFIG, generateTimeSlots } from '../../../utils';
+import { AREA_CONFIG, CLASSROOM_CONFIG, CARRERAS, SEDES, generateTimeSlots } from '../../../utils';
 import Modal from '../Common/Modal';
 import toast from 'react-hot-toast';
 
@@ -32,16 +35,20 @@ const SubjectsView = () => {
 
     // Controls if we are showing the custom input field for credits
     const [isCustomCreditsMode, setIsCustomCreditsMode] = useState(false);
+    const [isAulasAccordionOpen, setIsAulasAccordionOpen] = useState(false);
+
+    const allTimeSlots = generateTimeSlots();
 
     const [formData, setFormData] = useState<SubjectFormData>({
         name: '',
         sigla: '',
-        carrera: 'MULTIMEDIA Y PROD.AUDIOVISUAL',
-        sede: 'UP',
+        carrera: CARRERAS[0] || '',
+        sede: SEDES[0] || '',
         credits: 2,
         projectedStudents: 30,
         area: 'Audiovisual',
-        preferredDays: []
+        preferredDays: [],
+        jornada: 'diurna'
     });
 
     const handleOpenModal = (subject?: Subject) => {
@@ -58,15 +65,17 @@ const SubjectsView = () => {
             setFormData({
                 name: '',
                 sigla: '',
-                carrera: 'MULTIMEDIA Y PROD.AUDIOVISUAL',
-                sede: 'UP',
+                carrera: CARRERAS[0] || '',
+                sede: SEDES[0] || '',
                 credits: 2,
                 projectedStudents: 30,
                 area: 'Audiovisual',
                 preferredDays: [],
+                jornada: 'diurna',
                 sessionPatternString: '2'
             });
             setIsCustomCreditsMode(false);
+            setIsAulasAccordionOpen(false);
         }
         setIsModalOpen(true);
     };
@@ -310,21 +319,29 @@ const SubjectsView = () => {
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Carrera</label>
-                            <input
-                                type="text"
-                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-slate-900 bg-white uppercase"
+                            <select
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-slate-900 bg-white"
                                 value={formData.carrera || ''}
-                                onChange={e => setFormData({ ...formData, carrera: e.target.value.toUpperCase() })}
-                            />
+                                onChange={e => setFormData({ ...formData, carrera: e.target.value })}
+                            >
+                                <option value="">-- Seleccionar --</option>
+                                {CARRERAS.map(c => (
+                                    <option key={c} value={c}>{c}</option>
+                                ))}
+                            </select>
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Sede</label>
-                            <input
-                                type="text"
-                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-slate-900 bg-white uppercase"
+                            <select
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-slate-900 bg-white"
                                 value={formData.sede || ''}
-                                onChange={e => setFormData({ ...formData, sede: e.target.value.toUpperCase() })}
-                            />
+                                onChange={e => setFormData({ ...formData, sede: e.target.value })}
+                            >
+                                <option value="">-- Seleccionar --</option>
+                                {SEDES.map(s => (
+                                    <option key={s} value={s}>{s}</option>
+                                ))}
+                            </select>
                         </div>
                     </div>
 
@@ -350,6 +367,37 @@ const SubjectsView = () => {
                                 );
                             })}
                         </div>
+                    </div>
+
+                    {/* Jornada Toggle */}
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Jornada</label>
+                        <div className="flex gap-2">
+                            {(['diurna', 'vespertina', undefined] as const).map((j) => {
+                                const isSelected = formData.jornada === j;
+                                const IconComp = j === 'diurna' ? Sun : j === 'vespertina' ? Moon : null;
+                                const label = j === undefined ? 'Ambas' : j === 'diurna' ? 'Diurna' : 'Vespertina';
+                                return (
+                                    <button
+                                        key={j ?? 'ambas'}
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, jornada: j })}
+                                        className={`px-4 py-1.5 rounded-lg text-xs font-bold border transition-all flex items-center gap-1.5 ${isSelected
+                                            ? j === 'vespertina'
+                                                ? 'bg-indigo-50 border-indigo-400 text-indigo-700 ring-1 ring-indigo-400'
+                                                : j === 'diurna'
+                                                    ? 'bg-amber-50 border-amber-400 text-amber-700 ring-1 ring-amber-400'
+                                                    : 'bg-emerald-50 border-emerald-500 text-emerald-700 ring-1 ring-emerald-500'
+                                            : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                                            }`}
+                                    >
+                                        {IconComp && <IconComp size={12} />}
+                                        {label}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        <p className="text-[10px] text-slate-400 mt-1">Vespertina restringe a horarios de 17:50 en adelante.</p>
                     </div>
 
                     <div className="space-y-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
@@ -387,48 +435,56 @@ const SubjectsView = () => {
                             </div>
                         </div>
 
+                        {/* Accordion: Aulas Específicas */}
                         <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Aulas Específicas (Opcional)</label>
-                            <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-1">
-                                {state.classrooms.map(c => {
-                                    const isSelected = formData.allowedClassroomIds?.includes(c.id);
-                                    return (
-                                        <button
-                                            key={c.id}
-                                            type="button"
-                                            onClick={() => {
-                                                const current = formData.allowedClassroomIds || [];
-                                                const next = isSelected
-                                                    ? current.filter(id => id !== c.id)
-                                                    : [...current, c.id];
-                                                setFormData({ ...formData, allowedClassroomIds: next });
-                                            }}
-                                            className={`px-2 py-1 rounded text-[10px] font-bold border transition-all ${isSelected
-                                                ? 'bg-blue-50 border-blue-400 text-blue-700'
-                                                : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
-                                                }`}
-                                        >
-                                            {c.name}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Docente Preferido (Opcional)</label>
-                            <select
-                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none bg-white text-slate-900"
-                                value={formData.preferredTeacherId || ''}
-                                onChange={e => setFormData({ ...formData, preferredTeacherId: e.target.value })}
+                            <button
+                                type="button"
+                                onClick={() => setIsAulasAccordionOpen(!isAulasAccordionOpen)}
+                                className="flex items-center justify-between w-full text-xs font-bold text-slate-500 uppercase mb-1 hover:text-slate-700 transition-colors"
                             >
-                                <option value="">-- Sin asignar --</option>
-                                {state.teachers.map(t => (
-                                    <option key={t.id} value={t.id}>{t.name}</option>
-                                ))}
-                            </select>
+                                <span>Aulas Específicas (Opcional){formData.allowedClassroomIds && formData.allowedClassroomIds.length > 0 ? ` — ${formData.allowedClassroomIds.length} seleccionadas` : ''}</span>
+                                <ChevronDown size={14} className={`transition-transform ${isAulasAccordionOpen ? 'rotate-180' : ''}`} />
+                            </button>
+                            {isAulasAccordionOpen && (
+                                <div className="space-y-3 animate-fade-in">
+                                    <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-1">
+                                        {state.classrooms
+                                            .filter(c => !formData.allowedClassroomTypes || formData.allowedClassroomTypes.length === 0 || formData.allowedClassroomTypes.includes(c.type))
+                                            .map(c => {
+                                                const isSelected = formData.allowedClassroomIds?.includes(c.id);
+                                                return (
+                                                    <button
+                                                        key={c.id}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const current = formData.allowedClassroomIds || [];
+                                                            const next = isSelected
+                                                                ? current.filter(id => id !== c.id)
+                                                                : [...current, c.id];
+                                                            setFormData({ ...formData, allowedClassroomIds: next });
+                                                        }}
+                                                        className={`px-2 py-1 rounded text-[10px] font-bold border transition-all ${isSelected
+                                                            ? 'bg-blue-50 border-blue-400 text-blue-700'
+                                                            : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                                                            }`}
+                                                    >
+                                                        {c.name}
+                                                    </button>
+                                                );
+                                            })}
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Observaciones</label>
+                                        <textarea
+                                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-slate-900 bg-white text-sm resize-none"
+                                            rows={2}
+                                            value={formData.classroomObservations || ''}
+                                            onChange={e => setFormData({ ...formData, classroomObservations: e.target.value })}
+                                            placeholder="Ej: Necesita proyector, espacio para sets de grabación..."
+                                        />
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -459,6 +515,44 @@ const SubjectsView = () => {
                             })}
                         </div>
                         <p className="text-[10px] text-slate-400 mt-1">Si no selecciona ninguno, se asume que puede dictarse cualquier día.</p>
+
+                        {/* Preferred Time Range (Option A) */}
+                        {formData.preferredDays && formData.preferredDays.length > 0 && (
+                            <div className="mt-3 flex items-center gap-3 animate-fade-in">
+                                <label className="text-xs font-bold text-slate-500 whitespace-nowrap">Horario:</label>
+                                <select
+                                    className="px-2 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm text-slate-900 bg-white"
+                                    value={formData.preferredTimeRange?.start || ''}
+                                    onChange={e => setFormData({
+                                        ...formData,
+                                        preferredTimeRange: e.target.value
+                                            ? { start: e.target.value, end: formData.preferredTimeRange?.end || allTimeSlots[allTimeSlots.length - 1]?.end || '' }
+                                            : undefined
+                                    })}
+                                >
+                                    <option value="">Desde (cualquiera)</option>
+                                    {allTimeSlots.map(s => (
+                                        <option key={s.id} value={s.start}>{s.start}</option>
+                                    ))}
+                                </select>
+                                <span className="text-slate-400 text-xs">→</span>
+                                <select
+                                    className="px-2 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm text-slate-900 bg-white"
+                                    value={formData.preferredTimeRange?.end || ''}
+                                    onChange={e => setFormData({
+                                        ...formData,
+                                        preferredTimeRange: e.target.value
+                                            ? { start: formData.preferredTimeRange?.start || allTimeSlots[0]?.start || '', end: e.target.value }
+                                            : undefined
+                                    })}
+                                >
+                                    <option value="">Hasta (cualquiera)</option>
+                                    {allTimeSlots.map(s => (
+                                        <option key={s.id} value={s.end}>{s.end}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
                     </div>
 
                     <div>
@@ -495,7 +589,7 @@ const SubjectsView = () => {
                         </div>
 
                         {isCustomCreditsMode && (
-                            <div className="mt-3 animate-fade-in">
+                            <div className="mt-3 space-y-3 animate-fade-in">
                                 <div className="flex items-center border border-slate-300 rounded-lg px-3 py-2 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-emerald-500 bg-white">
                                     <input
                                         type="number"
@@ -508,21 +602,22 @@ const SubjectsView = () => {
                                     />
                                     <span className="text-slate-400 text-sm ml-2">Horas</span>
                                 </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 mb-1">Patrón de Sesiones</label>
+                                    <input
+                                        type="text"
+                                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all text-slate-900 bg-white text-sm"
+                                        value={formData.sessionPatternString || ''}
+                                        onChange={e => setFormData({ ...formData, sessionPatternString: e.target.value })}
+                                        placeholder="Ej: 2, 1 para una materia de 3h"
+                                    />
+                                    <p className="text-[10px] text-slate-400 mt-1">Define cómo se dividen las horas. Ej: "2, 1" crea un bloque de 2h y uno de 1h.</p>
+                                </div>
                             </div>
                         )}
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Patrón de Sesiones (Opcional)</label>
-                        <input
-                            type="text"
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all text-slate-900 bg-white"
-                            value={formData.sessionPatternString || ''}
-                            onChange={e => setFormData({ ...formData, sessionPatternString: e.target.value })}
-                            placeholder="Ej: 2, 1 para una materia de 3h"
-                        />
-                        <p className="text-[10px] text-slate-400 mt-1">Define cómo se dividen las horas. Ej: "2, 1" crea un bloque de 2h y uno de 1h.</p>
-                    </div>
+
 
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Estudiantes Proyectados</label>

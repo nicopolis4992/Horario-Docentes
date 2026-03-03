@@ -41,10 +41,12 @@ export interface Subject {
   projectedStudents: number;
   area: SubjectArea; // New field for the degree axis
   preferredDays?: DayOfWeek[]; // Restricted days for this subject (e.g., Mon/Wed/Fri)
+  preferredTimeRange?: { start: string; end: string }; // Preferred time range (e.g., "07:00"-"12:30")
+  jornada?: 'diurna' | 'vespertina'; // Schedule shift restriction
   requiredClassroomType?: ClassroomType; // Mapping for automated generation
-  preferredTeacherId?: string;
   allowedClassroomIds?: string[];
   allowedClassroomTypes?: ClassroomType[];
+  classroomObservations?: string; // Notes about classroom preferences
   sessionPattern?: number[]; // Default pattern for generated groups (e.g., [2, 1])
 }
 

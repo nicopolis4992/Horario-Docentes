@@ -21,7 +21,7 @@ const ClassroomsView = () => {
 
     const [formData, setFormData] = useState<Partial<Classroom>>({
         name: '',
-        type: 'Aula',
+        type: 'AULA',
         recommendedCapacity: 30,
         maxCapacity: 40
     });
@@ -32,7 +32,7 @@ const ClassroomsView = () => {
             setFormData(room);
         } else {
             setEditingRoom(null);
-            setFormData({ name: '', type: 'Aula', recommendedCapacity: 30, maxCapacity: 40 });
+            setFormData({ name: '', type: 'AULA', recommendedCapacity: 30, maxCapacity: 40 });
         }
         setIsModalOpen(true);
     };
@@ -83,8 +83,8 @@ const ClassroomsView = () => {
 
     const getClassroomIcon = (type: ClassroomType) => {
         switch (type) {
-            case 'Lab PC': return Monitor;
-            case 'Lab Mac': return MonitorPlay;
+            case 'PC': return Monitor;
+            case 'MAC': return MonitorPlay;
             default: return Armchair;
         }
     };
@@ -107,7 +107,7 @@ const ClassroomsView = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {state.classrooms.map((room) => {
-                    const config = CLASSROOM_CONFIG[room.type] || CLASSROOM_CONFIG['Aula'];
+                    const config = CLASSROOM_CONFIG[room.type] || CLASSROOM_CONFIG['AULA'];
                     const Icon = getClassroomIcon(room.type);
 
                     return (
