@@ -254,9 +254,12 @@ const ScheduleHeader = () => {
                         >
                             <option value="">Selecciona un aula...</option>
                             {state.classrooms.map(c => {
-                                const assignedCount = state.assignments.filter(a => a.classroomId === c.id).length;
-                                const totalSlots = timeSlots.length * 6; // 6 days max (Mon-Sat)
-                                const percentage = Math.round((assignedCount / totalSlots) * 100);
+                                // Only count daytime slots (before 17:50)
+                                const diurnaSlots = timeSlots.filter(s => s.start < '17:50');
+                                const diurnaSlotIds = new Set(diurnaSlots.map(s => s.id));
+                                const assignedCount = state.assignments.filter(a => a.classroomId === c.id && diurnaSlotIds.has(a.timeSlotId)).length;
+                                const totalSlots = diurnaSlots.length * 5; // 5 weekdays
+                                const percentage = totalSlots > 0 ? Math.round((assignedCount / totalSlots) * 100) : 0;
                                 return (
                                     <option key={c.id} value={c.id}>
                                         {c.name} {assignedCount > 0 ? `(${percentage}% ocup.)` : ''}

@@ -11,12 +11,15 @@ Este proyecto sigue una arquitectura **Local-First**:
 2.  **Resiliencia:** Funciona sin conexión a internet.
 3.  **Sin Burocracia:** No requiere instalación de servidores ni permisos de TI para empezar a usarlo.
 
-## ✨ Funcionalidades (MVP)
-*   **Gestión de Oferta Académica (NUEVO):** Calculadora inteligente de paralelos basada en la proyección de estudiantes y capacidad de aulas. Asignación previa de docentes.
-*   **Motor de Tiempo Dinámico:** Generación automática de bloques horarios con reglas de descansos (5 min entre clases).
-*   **Gestión de Recursos:** Base de datos local de Docentes, Aulas y Materias.
+## ✨ Funcionalidades
+*   **Gestión de Oferta Académica:** Calculadora inteligente de paralelos con nomenclatura secuencial, vista por materia y por docente con reasignación.
+*   **Motor de Tiempo Dinámico:** Generación automática de bloques horarios con reglas de descansos (5 min entre clases), jornada diurna/vespertina.
+*   **Gestión de Recursos:** Base de datos local de Docentes (especialidades, disponibilidad), Aulas (tipos PC/MAC/AULA, capacidades) y Materias (sigla, carrera, sede, jornada, patrones de sesión).
+*   **Auto-Asignación Inteligente:** Algoritmo de 3 pasadas para priorización de aulas específicas, con fallback a aulas compatibles.
+*   **Drag & Drop:** Arrastrar sesiones pendientes a la grilla y reubicar bloques existentes.
+*   **Exportación:** CSV, XLSX, PDF, PNG, ZIP. Datos por hora con códigos de bloque y capacidad de aula.
 *   **Dashboard:** Resumen estadístico de la planificación semestral.
-*   **Validaciones:** Alertas visuales para conflictos de horarios y sobrepoblación de aulas.
+*   **Validaciones:** Conflictos de horarios, sobrecarga docente, restricciones de jornada y días preferidos.
 
 ## 🛠️ Stack Tecnológico
 *   **Core:** React 18 + TypeScript

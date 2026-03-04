@@ -11,73 +11,82 @@ import { generateTimeSlots, DAY_NUMBER_MAP, getBlockCode } from '../../../utils'
  */
 export const generateExportData = (state: AppState) => {
     const timeSlots = generateTimeSlots();
+    const rows: any[] = [];
 
-    return state.courseGroups.map(group => {
+    state.courseGroups.forEach(group => {
         const subject = state.subjects.find(s => s.id === group.subjectId);
         const groupAssignments = state.assignments.filter(a => a.courseGroupId === group.id);
-
-        let firstSlotCode = '';
-        let isDiurno = false;
-        let firstSlot = null;
-        let firstRoom = null;
-        let teacher = null;
-
-        if (groupAssignments.length > 0) {
-            // Sort to find the chronologically first assignment
-            groupAssignments.sort((a, b) => {
-                if (a.day !== b.day) {
-                    return DAY_NUMBER_MAP[a.day] - DAY_NUMBER_MAP[b.day];
-                }
-                const slotA = timeSlots.findIndex(s => s.id === a.timeSlotId);
-                const slotB = timeSlots.findIndex(s => s.id === b.timeSlotId);
-                return slotA - slotB;
-            });
-
-            const firstAssignment = groupAssignments[0];
-            const slotIndex = timeSlots.findIndex(s => s.id === firstAssignment.timeSlotId);
-            firstSlot = timeSlots[slotIndex];
-
-            if (firstSlot) {
-                firstSlotCode = getBlockCode(firstAssignment.day, slotIndex).toString();
-                // "Diurno" if it starts before 17:50
-                isDiurno = firstSlot.start < '17:50';
-            }
-
-            firstRoom = state.classrooms.find(c => c.id === firstAssignment.classroomId);
-            teacher = state.teachers.find(t => t.id === firstAssignment.teacherId || group.teacherId);
-        } else {
-            teacher = state.teachers.find(t => t.id === group.teacherId);
-        }
+        const teacher = state.teachers.find(t => t.id === group.teacherId);
 
         // Extract numeric parallel from group name (e.g., "Paralelo 1" -> "1")
         const parallelMatch = group.name.match(/\d+/);
         const paraleloStr = parallelMatch ? parallelMatch[0] : (group.name || '');
 
-        return {
-            'row_index': '',
-            'carrera_code': '',
-            'carrera_name': subject?.carrera || 'MULTIMEDIA Y PROD.AUDIOVISUAL',
-            'sede': subject?.sede || 'UP',
-            'asignatura': subject?.name || 'Materia sin nombre',
-            'sigla': subject?.sigla || '',
-            'creditos': subject?.credits || 0,
-            'nivel': subject?.semester || '',
-            'bloque': '',
-            'paralelo': paraleloStr,
-            'banner_id_principal': teacher?.institutionalId || '',
-            'banner_id_secundario': '',
-            'banner_id_tercero': '',
-            'cupo': group.studentCount || subject?.projectedStudents || 0,
-            'matu_vesp': firstSlot ? (isDiurno ? 'D' : 'V') : '',
-            'virtual': '',
-            'need_aula': 'TRUE',
-            'tipo': firstRoom?.type || '',
-            'nume_sala': firstRoom?.name || '',
-            'teor': 'TEO',
-            'carpeta_linea': 'TRUE',
-            'h1': firstSlotCode,
-        };
+        if (groupAssignments.length === 0) {
+            // Group has no assignments — export a single row with no schedule data
+            rows.push({
+                'row_index': '',
+                'carrera_code': '',
+                'carrera_name': subject?.carrera || 'MULTIMEDIA Y PROD.AUDIOVISUAL',
+                'sede': subject?.sede || 'UP',
+                'asignatura': subject?.name || 'Materia sin nombre',
+                'sigla': subject?.sigla || '',
+                'creditos': subject?.credits || 0,
+                'nivel': subject?.semester || '',
+                'bloque': '',
+                'paralelo': paraleloStr,
+                'banner_id_principal': teacher?.institutionalId || '',
+                'banner_id_secundario': '',
+                'banner_id_tercero': '',
+                'cupo': 0,
+                'matu_vesp': '',
+                'virtual': '',
+                'need_aula': 'TRUE',
+                'tipo': '',
+                'nume_sala': '',
+                'teor': 'TEO',
+                'carpeta_linea': 'TRUE',
+                'h1': '',
+            });
+            return;
+        }
+
+        // One row PER assignment (per hour)
+        groupAssignments.forEach(assignment => {
+            const slotIndex = timeSlots.findIndex(s => s.id === assignment.timeSlotId);
+            const slot = slotIndex >= 0 ? timeSlots[slotIndex] : null;
+            const room = state.classrooms.find(c => c.id === assignment.classroomId);
+            const blockCode = slot ? getBlockCode(assignment.day, slotIndex).toString() : '';
+            const isDiurno = slot ? slot.start < '17:50' : false;
+
+            rows.push({
+                'row_index': '',
+                'carrera_code': '',
+                'carrera_name': subject?.carrera || 'MULTIMEDIA Y PROD.AUDIOVISUAL',
+                'sede': subject?.sede || 'UP',
+                'asignatura': subject?.name || 'Materia sin nombre',
+                'sigla': subject?.sigla || '',
+                'creditos': subject?.credits || 0,
+                'nivel': subject?.semester || '',
+                'bloque': '',
+                'paralelo': paraleloStr,
+                'banner_id_principal': teacher?.institutionalId || '',
+                'banner_id_secundario': '',
+                'banner_id_tercero': '',
+                'cupo': room?.maxCapacity || 0,
+                'matu_vesp': slot ? (isDiurno ? 'D' : 'V') : '',
+                'virtual': '',
+                'need_aula': 'TRUE',
+                'tipo': room?.type || '',
+                'nume_sala': room?.name || '',
+                'teor': 'TEO',
+                'carpeta_linea': 'TRUE',
+                'h1': blockCode,
+            });
+        });
     });
+
+    return rows;
 };
 
 /**

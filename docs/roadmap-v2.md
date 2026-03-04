@@ -42,7 +42,7 @@
 ### Fase 4: Refinamiento de UX (Inmediato)
 - [x] **Drag & Drop:** Implementar `dnd-kit` para mover grupos a la grilla, incluyendo arrastre de bloques existentes.
 - [x] **Estabilización UI:** Refactorización del Header del planificador y filtrado dinámico del Sidebar de Pendientes.
-- [ ] **Reportes:** Exportación CSV/PDF para secretaría académica.
+- [x] **Reportes:** Exportación CSV/XLSX/PDF/PNG/ZIP con datos por hora, códigos de bloque y capacidad de aula.
 
 ### Fase 5: Inteligencia Académica (MVP++)
 - [x] **Módulo de Especialidades:** Vincular docentes con áreas de conocimiento.
@@ -50,8 +50,9 @@
 - [x] **Reglas de Días Preferidos:** Restricciones de días a nivel de materia (Caso "Inglés").
 
 ### Fase 6: Optimización de Recursos (Escalabilidad)
-- [ ] **Room Balancer:** Indicador visual de eficiencia de ocupación.
-- [ ] **Aaffinity Labs:** Prioridad automática para laboratorios según tipo de materia.
+- [x] **Room Balancer:** Indicador de ocupación diurna por aula en el selector.
+- [x] **Affinity Labs:** Algoritmo de 3 pasadas para priorización de aulas específicas por materia (`allowedClassroomIds`).
+- [x] **UI Responsiva:** Fix de zoom/layout, scroll, z-index, oferta por docente con reasignación.
 
 ### Fase 7: Infraestructura 2026
 - [ ] **Migración Dexie (IndexedDB):** Persistencia ilimitada y transaccional.
@@ -60,6 +61,6 @@
 ---
 
 ## 4. Próximos pasos
-1. **Refactor de `types.ts`:** Incluir `specialties` y `sessionPatterns`.
+1. ~~**Refactor de `types.ts`:**~~ ✅ Completado (`allowedSubjectIds`, `sessionPattern`, `jornada`, `allowedClassroomIds`, `sigla`, `carrera`, `sede`).
 2. **Setup de Dexie.js:** Reemplazar `localStorage` para evitar bloqueos por tamaño.
-3. **Lógica de Inglés:** Implementar validación de día preferido en el modal de asignación.
+3. ~~**Lógica de Inglés:**~~ ✅ Completado (validación de `preferredDays` + `preferredTimeRange` + `jornada`).

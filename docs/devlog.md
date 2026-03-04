@@ -114,3 +114,62 @@ Necesidad de instanciar materias abstractas en grupos concretos ("Paralelos") an
     *   Corrección de intersección de eventos (`pointer-events`) que impedía arrastrar y reubicar bloques de clases ya existentes en la cuadrícula.
 4.  **Auto-Asignación Inteligente:**
     *   Restricción de la función "Auto-Asignar" para operar exclusivamente de Lunes a Viernes por defecto (omitiendo sábados a menos que la materia indique lo contrario en sus días preferidos).
+
+---
+
+## Fase 7: Mejoras de UI/UX y Oferta por Docente
+**Estado:** ✅ Completado
+**Fecha:** 2026-03-03
+
+### Hitos Alcanzados:
+1.  **Layout Responsivo:**
+    *   Fix del "piso blanco" causado por `zoom: 0.85` en `index.html`. Se aplicó `height: 100%` + `overflow: hidden` a `html`, `body` y `#root`.
+    *   Cambio de `h-screen` a `h-full` en el layout raíz (`index.tsx`).
+2.  **Oferta por Docente (TeacherDetailPanel):**
+    *   Nuevo componente `TeacherDetailPanel.tsx` con resumen del docente (avatar, nombre, barra de carga) y lista de paralelos asignados.
+    *   Dropdown de **reasignación de docente** con indicadores de carga horaria y alertas de sobrecarga (ej. `"Andrés Revelo (Total: 18/21h) ⚠️"`).
+3.  **Nomenclatura Secuencial de Paralelos:**
+    *   Los nuevos paralelos se nombran automáticamente como `Paralelo N+1` tanto en creación manual (`ActiveGroupsList.tsx`) como en generación masiva (`useOfferPlanner.ts`).
+4.  **Schedule Grid:**
+    *   Eliminado scrollbar interno redundante que desalineaba los headers de día.
+    *   Incrementado `z-index` de headers sticky a `z-20` para evitar solapamiento con bloques.
+5.  **Validación de Jornada:**
+    *   Las materias marcadas como "diurnas" ya no se asignan en horario vespertino durante la auto-asignación.
+
+---
+
+## Fase 8: Algoritmo Inteligente de Asignación de Aulas (3 Pasadas)
+**Estado:** ✅ Completado
+**Fecha:** 2026-03-03
+
+### Problema Detectado:
+Las materias con un aula específica obligatoria (ej. "Desarrollo de Juegos" → aula -510) no recibían su aula porque otras materias genéricas (tipo PC) la ocupaban primero.
+
+### Solución Implementada:
+1.  **Sistema de 3 Pasadas en `handleAutoAssignAll`:**
+    *   **Pasada 1 (Mandatory):** Materias con `subject.allowedClassroomIds` se asignan primero a sus aulas específicas.
+    *   **Pasada 2 (Flexible/Planned):** Materias con `group.plannedClassroomId` intentan su aula planificada; si está ocupada, buscan otra del mismo tipo.
+    *   **Pasada 3 (Flexible/Generic):** Todo lo demás usa cualquier aula compatible disponible.
+2.  **Selección de Aula Consistente por Bloque:**
+    *   Corregido bug donde cada hora de un bloque multi-hora podía asignarse a un aula diferente. Ahora se busca UNA aula libre para TODAS las horas del bloque.
+3.  **Protección en Oferta Académica (`getEligibleRooms`):**
+    *   Al generar paralelos por tipo de aula, se excluyen las aulas reservadas por `allowedClassroomIds` de otras materias.
+4.  **Ocupación de Aulas:**
+    *   El porcentaje de ocupación en el dropdown de aulas ahora solo considera la jornada diurna (antes de 17:50, Lun-Vie).
+
+---
+
+## Fase 9: Mejoras en Exportación
+**Estado:** ✅ Completado
+**Fecha:** 2026-03-03
+
+### Hitos Alcanzados:
+1.  **Exportación por Hora:**
+    *   Cada hora de un paralelo genera una fila independiente en el Excel/CSV. Un paralelo de 3h produce 3 filas.
+2.  **ID de Docente Corregido:**
+    *   Se usaba un operador `||` incorrecto que impedía encontrar el `institutionalId` del docente. Ahora se busca directamente desde `group.teacherId`.
+3.  **Códigos de Bloque Correctos:**
+    *   Cada fila tiene su propio código de bloque (ej. Lunes 7:00 = 101, 8:05 = 102, 9:10 = 103).
+4.  **Cupo = Capacidad Máxima del Aula:**
+    *   El campo `cupo` ahora usa `room.maxCapacity` en lugar de `group.studentCount`.
+

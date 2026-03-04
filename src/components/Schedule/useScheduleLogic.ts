@@ -568,7 +568,6 @@ export const useScheduleLogic = () => {
 
                     let canFit = true;
                     const potentialSlots: string[] = [];
-                    const slotClassrooms: string[] = []; // classroom chosen per slot
 
                     for (let j = 0; j < hoursToAssign; j++) {
                         const slot = timeSlots[i + j];
@@ -590,43 +589,61 @@ export const useScheduleLogic = () => {
                             canFit = false; break;
                         }
 
-                        // 4. Room availability — pick a room dynamically
-                        let roomId: string | null = null;
-
-                        if (mode === 'mandatory') {
-                            // Must use one of the allowedClassroomIds
-                            if (subject.allowedClassroomIds) {
-                                for (const cId of subject.allowedClassroomIds) {
-                                    if (!occupiedRooms.has(`${slotKey}-${cId}`)) { roomId = cId; break; }
-                                }
-                            }
-                            if (!roomId) { canFit = false; break; }
-                        } else {
-                            // Flexible: try planned room → then any compatible room
-                            roomId = findBestClassroom(subject, slot.id, day, group.plannedClassroomId || undefined);
-                            if (!roomId) { canFit = false; break; }
-                        }
-
                         potentialSlots.push(slot.id);
-                        slotClassrooms.push(roomId);
                     }
 
                     if (canFit && potentialSlots.length === hoursToAssign) {
-                        potentialSlots.forEach((slotId, idx) => {
-                            const payload = {
-                                id: crypto.randomUUID(),
-                                day: day,
-                                timeSlotId: slotId,
-                                subjectId: group.subjectId,
-                                teacherId: teacherId,
-                                classroomId: slotClassrooms[idx],
-                                courseGroupId: group.id
-                            };
-                            newAssignments.push(payload);
-                            occupiedSlots.add(`${day}-${slotId}-${teacherId}`);
-                            occupiedRooms.add(`${day}-${slotId}-${payload.classroomId}`);
-                        });
-                        assigned = true;
+                        // Find ONE classroom that is free for ALL slots in this block
+                        let chosenRoom: string | null = null;
+
+                        if (mode === 'mandatory' && subject.allowedClassroomIds) {
+                            // Must use one of the specific allowed classrooms
+                            for (const cId of subject.allowedClassroomIds) {
+                                const allFree = potentialSlots.every(sId => !occupiedRooms.has(`${day}-${sId}-${cId}`));
+                                if (allFree) { chosenRoom = cId; break; }
+                            }
+                        } else {
+                            // Flexible: try planned room first, then any compatible
+                            const preferredId = group.plannedClassroomId;
+                            if (preferredId) {
+                                const allFree = potentialSlots.every(sId => !occupiedRooms.has(`${day}-${sId}-${preferredId}`));
+                                if (allFree) chosenRoom = preferredId;
+                            }
+                            // If planned room didn't work, try allowedClassroomIds
+                            if (!chosenRoom && subject.allowedClassroomIds) {
+                                for (const cId of subject.allowedClassroomIds) {
+                                    const allFree = potentialSlots.every(sId => !occupiedRooms.has(`${day}-${sId}-${cId}`));
+                                    if (allFree) { chosenRoom = cId; break; }
+                                }
+                            }
+                            // If still nothing, try any room matching allowed types
+                            if (!chosenRoom && subject.allowedClassroomTypes) {
+                                for (const c of state.classrooms) {
+                                    if (subject.allowedClassroomTypes.includes(c.type)) {
+                                        const allFree = potentialSlots.every(sId => !occupiedRooms.has(`${day}-${sId}-${c.id}`));
+                                        if (allFree) { chosenRoom = c.id; break; }
+                                    }
+                                }
+                            }
+                        }
+
+                        if (chosenRoom) {
+                            potentialSlots.forEach(slotId => {
+                                const payload = {
+                                    id: crypto.randomUUID(),
+                                    day: day,
+                                    timeSlotId: slotId,
+                                    subjectId: group.subjectId,
+                                    teacherId: teacherId,
+                                    classroomId: chosenRoom!,
+                                    courseGroupId: group.id
+                                };
+                                newAssignments.push(payload);
+                                occupiedSlots.add(`${day}-${slotId}-${teacherId}`);
+                                occupiedRooms.add(`${day}-${slotId}-${chosenRoom!}`);
+                            });
+                            assigned = true;
+                        }
                     }
                 }
             }
