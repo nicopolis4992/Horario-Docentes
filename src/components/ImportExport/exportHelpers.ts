@@ -47,6 +47,7 @@ export const generateExportData = (state: AppState) => {
                 'teor': 'TEO',
                 'carpeta_linea': 'TRUE',
                 'h1': '',
+                'observaciones': subject?.classroomObservations || '',
             });
             return;
         }
@@ -82,6 +83,7 @@ export const generateExportData = (state: AppState) => {
                 'teor': 'TEO',
                 'carpeta_linea': 'TRUE',
                 'h1': blockCode,
+                'observaciones': subject?.classroomObservations || '',
             });
         });
     });
