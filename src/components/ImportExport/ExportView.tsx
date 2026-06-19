@@ -19,44 +19,66 @@ const PrintableGrid: React.FC<{ resourceId: string, resourceType: 'teacher' | 'c
     });
     const timeSlots = hasVespertina ? timeSlotsAll : timeSlotsAll.filter(s => s.start < '17:50');
 
+    const resourceName = resourceType === 'teacher'
+        ? state.teachers.find(t => t.id === resourceId)?.name
+        : state.classrooms.find(c => c.id === resourceId)?.name;
+
+    // Inline styles for reliable html2canvas rendering (no dependency on external CSS)
+    const fontBase: React.CSSProperties = {
+        fontFamily: 'Arial, Helvetica, sans-serif',
+        wordSpacing: '0.05em',
+        letterSpacing: 'normal',
+        WebkitFontSmoothing: 'antialiased',
+    };
+
     return (
-        <div id={`print-grid-${resourceId}`} className="bg-white" style={{ width: '1000px', padding: '20px' }}>
-            <div className="mb-4 text-center">
-                <h2 className="text-xl font-bold text-slate-800">
-                    {resourceType === 'teacher'
-                        ? state.teachers.find(t => t.id === resourceId)?.name
-                        : state.classrooms.find(c => c.id === resourceId)?.name}
+        <div
+            id={`print-grid-${resourceId}`}
+            style={{ width: '1000px', padding: '20px', backgroundColor: '#ffffff', fontFamily: 'Arial, Helvetica, sans-serif' }}
+        >
+            {/* Header */}
+            <div style={{ marginBottom: '16px', textAlign: 'center' }}>
+                <h2 style={{ ...fontBase, fontSize: '20px', fontWeight: 'bold', color: '#1e293b', margin: 0 }}>
+                    {resourceName}
                 </h2>
-                <p className="text-slate-500">Horario Académico</p>
+                <p style={{ ...fontBase, fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' }}>
+                    Horario Académico
+                </p>
             </div>
 
-            <div className="border-2 border-slate-800 flex flex-col">
-                <div className="grid grid-cols-[80px_repeat(6,1fr)] border-b-2 border-slate-800 bg-slate-100">
-                    <div className="p-2 border-r border-slate-800 font-bold text-slate-700 text-center text-xs">Hora</div>
-                    {DAYS.map(day => (
-                        <div key={day} className="p-2 border-r border-slate-800 font-bold text-slate-800 text-center text-xs last:border-r-0">
+            {/* Grid */}
+            <div style={{ border: '2px solid #1e293b', display: 'flex', flexDirection: 'column' }}>
+                {/* Header row */}
+                <div style={{ display: 'grid', gridTemplateColumns: '80px repeat(6, 1fr)', borderBottom: '2px solid #1e293b', backgroundColor: '#f1f5f9' }}>
+                    <div style={{ ...fontBase, padding: '8px', borderRight: '1px solid #1e293b', fontWeight: 'bold', color: '#334155', textAlign: 'center', fontSize: '12px' }}>
+                        Hora
+                    </div>
+                    {DAYS.map((day, i) => (
+                        <div key={day} style={{ ...fontBase, padding: '8px', borderRight: i < DAYS.length - 1 ? '1px solid #1e293b' : 'none', fontWeight: 'bold', color: '#1e293b', textAlign: 'center', fontSize: '12px' }}>
                             {day}
                         </div>
                     ))}
                 </div>
 
-                <div className="grid grid-cols-[80px_repeat(6,1fr)] bg-white">
-                    <div className="border-r border-slate-800 flex flex-col">
+                {/* Body */}
+                <div style={{ display: 'grid', gridTemplateColumns: '80px repeat(6, 1fr)', backgroundColor: '#ffffff' }}>
+                    {/* Time column */}
+                    <div style={{ borderRight: '1px solid #1e293b', display: 'flex', flexDirection: 'column' }}>
                         {timeSlots.map(slot => (
-                            <div key={slot.id} className="h-[60px] border-b border-slate-200 text-[10px] font-mono text-slate-600 flex flex-col items-center justify-center p-1">
-                                <span>{slot.start}</span>
-                                <span>{slot.end}</span>
+                            <div key={slot.id} style={{ height: '60px', borderBottom: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '4px' }}>
+                                <span style={{ ...fontBase, fontSize: '10px', fontFamily: 'Courier New, monospace', color: '#475569' }}>{slot.start}</span>
+                                <span style={{ ...fontBase, fontSize: '10px', fontFamily: 'Courier New, monospace', color: '#475569' }}>{slot.end}</span>
                             </div>
                         ))}
                     </div>
 
-                    {DAYS.map(day => {
+                    {/* Day columns */}
+                    {DAYS.map((day, dayIdx) => {
                         const dayAssignments = state.assignments.filter(a =>
                             a.day === day &&
                             (resourceType === 'teacher' ? a.teacherId === resourceId : a.classroomId === resourceId)
                         );
 
-                        // Calculate visual blocks
                         const blocks: any[] = [];
                         const sorted = [...dayAssignments].sort((a, b) => {
                             const groupCompare = (a.courseGroupId || '').localeCompare(b.courseGroupId || '');
@@ -67,7 +89,6 @@ const PrintableGrid: React.FC<{ resourceId: string, resourceType: 'teacher' | 'c
                         sorted.forEach((a: any) => {
                             const idx = timeSlots.findIndex(s => s.id === a.timeSlotId);
                             const lastBlock = blocks[blocks.length - 1];
-
                             if (lastBlock &&
                                 lastBlock.assignment.courseGroupId === a.courseGroupId &&
                                 lastBlock.slotIndex + lastBlock.span === idx &&
@@ -79,41 +100,65 @@ const PrintableGrid: React.FC<{ resourceId: string, resourceType: 'teacher' | 'c
                             }
                         });
 
+                        // Color map for areas (inline, no CSS dependency)
+                        const areaColors: Record<string, { bg: string; border: string }> = {
+                            'Audiovisual': { bg: '#eff6ff', border: '#60a5fa' },
+                            'Diseño': { bg: '#f0fdf4', border: '#4ade80' },
+                            'Tecnología': { bg: '#fefce8', border: '#facc15' },
+                            'Humanidades': { bg: '#fdf4ff', border: '#c084fc' },
+                            'Matemáticas': { bg: '#fff7ed', border: '#fb923c' },
+                            'default': { bg: '#f8fafc', border: '#94a3b8' },
+                        };
+
                         return (
-                            <div key={day} className="relative border-r border-slate-200 last:border-r-0">
+                            <div key={day} style={{ position: 'relative', borderRight: dayIdx < DAYS.length - 1 ? '1px solid #e2e8f0' : 'none' }}>
+                                {/* Background rows */}
                                 {timeSlots.map(slot => (
-                                    <div key={slot.id} className="h-[60px] border-b border-slate-100"></div>
+                                    <div key={slot.id} style={{ height: '60px', borderBottom: '1px solid #f1f5f9' }} />
                                 ))}
 
+                                {/* Assignment blocks */}
                                 {blocks.map(block => {
                                     const { assignment, span, slotIndex } = block;
                                     const subject = state.subjects.find(s => s.id === assignment.subjectId);
                                     const room = state.classrooms.find(c => c.id === assignment.classroomId);
                                     const teacher = state.teachers.find(t => t.id === assignment.teacherId);
                                     const group = state.courseGroups.find(g => g.id === assignment.courseGroupId);
-                                    const config = subject ? AREA_CONFIG[subject.area] : AREA_CONFIG['Audiovisual'];
+                                    const colors = areaColors[subject?.area || 'default'] || areaColors['default'];
 
                                     return (
                                         <div
                                             key={assignment.id}
-                                            className="absolute left-0 right-0 z-10"
                                             style={{
+                                                position: 'absolute',
                                                 top: `${slotIndex * 60}px`,
                                                 height: `${span * 60}px`,
-                                                padding: '2px'
+                                                left: 0,
+                                                right: 0,
+                                                padding: '2px',
+                                                zIndex: 10,
+                                                boxSizing: 'border-box',
                                             }}
                                         >
-                                            <div className={`h-full rounded border-2 ${config.bg} border-${config.color.split('-')[1]}-400 flex flex-col p-1.5 overflow-hidden`}>
-                                                <div className="font-bold text-[10px] sm:text-xs text-slate-800 leading-tight">
+                                            <div style={{
+                                                height: '100%',
+                                                borderRadius: '4px',
+                                                border: `2px solid ${colors.border}`,
+                                                backgroundColor: colors.bg,
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                padding: '6px',
+                                                overflow: 'hidden',
+                                                boxSizing: 'border-box',
+                                            }}>
+                                                <div style={{ ...fontBase, fontWeight: 'bold', fontSize: '10px', color: '#1e293b', lineHeight: '1.3' }}>
                                                     {subject?.name || 'Materia'}
                                                 </div>
-                                                <div className="text-[9px] text-slate-600 mt-0.5">
+                                                <div style={{ ...fontBase, fontSize: '9px', color: '#475569', marginTop: '2px' }}>
                                                     {group?.name || 'Clase'}
                                                 </div>
-                                                <div className="mt-auto pt-1 flex justify-between text-[9px] font-bold text-slate-700">
-                                                    <span>
-                                                        {resourceType === 'teacher' ? room?.name : teacher?.name}
-                                                    </span>
+                                                <div style={{ ...fontBase, marginTop: 'auto', paddingTop: '4px', fontSize: '9px', fontWeight: 'bold', color: '#334155' }}>
+                                                    {resourceType === 'teacher' ? room?.name : teacher?.name}
                                                 </div>
                                             </div>
                                         </div>

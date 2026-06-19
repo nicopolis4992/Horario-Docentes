@@ -127,9 +127,16 @@ export const captureAndDownloadImage = async (elementId: string, filename: strin
     if (!element) throw new Error('Element not found');
 
     const canvas = await html2canvas(element, {
-        scale: 2, // Higher resolution
+        scale: 2,
         backgroundColor: '#ffffff',
-        logging: false
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+        onclone: (clonedDoc) => {
+            const style = clonedDoc.createElement('style');
+            style.textContent = `* { font-family: Arial, Helvetica, sans-serif !important; word-spacing: normal !important; letter-spacing: normal !important; }`;
+            clonedDoc.head.appendChild(style);
+        }
     });
 
     const dataUrl = canvas.toDataURL('image/png');
@@ -150,7 +157,14 @@ export const captureToPDF = async (elementId: string, doc: jsPDF, isFirstPage: b
     const canvas = await html2canvas(element, {
         scale: 2,
         backgroundColor: '#ffffff',
-        logging: false
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+        onclone: (clonedDoc) => {
+            const style = clonedDoc.createElement('style');
+            style.textContent = `* { font-family: Arial, Helvetica, sans-serif !important; word-spacing: normal !important; letter-spacing: normal !important; }`;
+            clonedDoc.head.appendChild(style);
+        }
     });
 
     const imgData = canvas.toDataURL('image/png');
@@ -181,7 +195,14 @@ export const captureAllAsZip = async (items: { id: string, name: string }[], fil
         const canvas = await html2canvas(element, {
             scale: 2,
             backgroundColor: '#ffffff',
-            logging: false
+            logging: false,
+            useCORS: true,
+            allowTaint: true,
+            onclone: (clonedDoc) => {
+                const style = clonedDoc.createElement('style');
+                style.textContent = `* { font-family: Arial, Helvetica, sans-serif !important; word-spacing: normal !important; letter-spacing: normal !important; }`;
+                clonedDoc.head.appendChild(style);
+            }
         });
 
         // Get base64 data without the data URI prefix
