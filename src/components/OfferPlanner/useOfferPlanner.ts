@@ -94,11 +94,13 @@ export const useOfferPlanner = () => {
 
         const roomPool = eligibleRooms.length > 0 ? eligibleRooms : [refRoom];
         const newGroups: Partial<CourseGroup>[] = [];
-        let studentsRemaining = totalStudents;
+
+        // Equalize student counts as much as possible
+        const baseCount = numberOfGroups > 0 ? Math.floor(totalStudents / numberOfGroups) : 0;
+        const remainder = numberOfGroups > 0 ? totalStudents % numberOfGroups : 0;
 
         for (let i = 0; i < numberOfGroups; i++) {
-            const count = Math.min(capacity, studentsRemaining);
-            studentsRemaining -= count;
+            const count = baseCount + (i < remainder ? 1 : 0);
             const assignedRoom = roomPool[i % roomPool.length];
 
             newGroups.push({
@@ -180,13 +182,14 @@ export const useOfferPlanner = () => {
             const totalStudents = subject.projectedStudents;
             const numberOfGroups = Math.ceil(totalStudents / capacity);
 
-            let studentsRemaining = totalStudents;
-
             const existingCount = state.courseGroups.filter(g => g.subjectId === subject.id).length;
 
+            // Equalize student counts as much as possible
+            const baseCount = numberOfGroups > 0 ? Math.floor(totalStudents / numberOfGroups) : 0;
+            const remainder = numberOfGroups > 0 ? totalStudents % numberOfGroups : 0;
+
             for (let i = 0; i < numberOfGroups; i++) {
-                const count = Math.min(capacity, studentsRemaining);
-                studentsRemaining -= count;
+                const count = baseCount + (i < remainder ? 1 : 0);
 
                 const sortedRooms = [...eligibleRooms].sort((a, b) =>
                     getClassroomUsage(a.id, batchUsageCounts) - getClassroomUsage(b.id, batchUsageCounts)

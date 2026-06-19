@@ -74,8 +74,15 @@ const ActiveGroupsList = ({
                                     className="font-bold text-slate-800 text-lg bg-transparent border-b border-transparent hover:border-slate-300 focus:border-blue-500 outline-none w-full transition-colors"
                                     placeholder="Nombre del grupo"
                                 />
-                                <div className="flex items-center gap-1 text-sm text-slate-500 bg-slate-100 px-2 py-1 rounded w-fit mt-1">
-                                    <Users size={14} />
+                                <div
+                                    className={`flex items-center gap-1 text-sm rounded w-fit mt-1 transition-all ${
+                                        group.studentCount < 10
+                                            ? 'bg-amber-50 border border-amber-200 text-amber-700 px-2 py-0.5'
+                                            : 'bg-slate-100 px-2 py-1 text-slate-500'
+                                    }`}
+                                    title={group.studentCount < 10 ? "Advertencia: El paralelo tiene menos de 10 estudiantes" : undefined}
+                                >
+                                    {group.studentCount < 10 ? <AlertTriangle size={14} className="text-amber-500 animate-pulse" /> : <Users size={14} />}
                                     <input
                                         type="number"
                                         value={group.studentCount}

@@ -30,6 +30,30 @@ const ScheduleHeader = () => {
 
     const pendingHours = pendingSessions.reduce((acc, s) => acc + s.hours, 0);
 
+    const anyClassroomHasConflict = state.classrooms.some(c => {
+        const roomAssignments = state.assignments.filter(a => a.classroomId === c.id);
+        const slotKeys = roomAssignments.map(a => `${a.day}-${a.timeSlotId}`);
+        const hasOverlap = slotKeys.some((val, i) => slotKeys.indexOf(val) !== i);
+        if (hasOverlap) return true;
+        const hasOvercapacity = roomAssignments.some(a => {
+            const group = state.courseGroups.find(g => g.id === a.courseGroupId);
+            return group ? group.studentCount > c.maxCapacity : false;
+        });
+        return hasOvercapacity;
+    });
+
+    const anyTeacherHasConflict = state.teachers.some(t => {
+        const teacherAssignments = state.assignments.filter(a => a.teacherId === t.id);
+        const slotKeys = teacherAssignments.map(a => `${a.day}-${a.timeSlotId}`);
+        const hasOverlap = slotKeys.some((val, i) => slotKeys.indexOf(val) !== i);
+        if (hasOverlap) return true;
+        const hasUnavailable = teacherAssignments.some(a => t.unavailableSlots?.includes(`${a.day}-${a.timeSlotId}`));
+        if (hasUnavailable) return true;
+        if (t.maxHours > 0 && teacherAssignments.length > t.maxHours) return true;
+        const hasIncomplete = teacherAssignments.some(a => !a.classroomId || a.isIncomplete);
+        return hasIncomplete;
+    });
+
     const getInitials = (name: string) => {
         return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
     };
@@ -65,7 +89,7 @@ const ScheduleHeader = () => {
         <div className="bg-white flex flex-col border-b border-slate-200">
             {/* Top Bar (Static Height and consistent layout) */}
             <div className="px-6 py-4 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
-                <div className="flex items-center gap-6 w-full xl:w-auto overflow-x-auto pb-2 xl:pb-0">
+                <div className="flex items-center gap-4 w-full xl:w-auto overflow-x-auto pb-2 xl:pb-0">
                     <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2 shrink-0">
                         <button
                             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -82,17 +106,23 @@ const ScheduleHeader = () => {
                     <div className="flex bg-slate-100 p-1 rounded-lg shrink-0">
                         <button
                             onClick={() => handleTabChange('teacher')}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-md font-medium text-sm transition-all ${viewMode === 'teacher' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+                            className={`relative flex items-center gap-2 px-4 py-2 rounded-md font-medium text-sm transition-all ${viewMode === 'teacher' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
                         >
                             <Users size={16} />
-                            Docente
+                            <span>Docente</span>
+                            {anyTeacherHasConflict && (
+                                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 border-2 border-slate-100 rounded-full animate-pulse" title="Hay conflictos en docentes"></span>
+                            )}
                         </button>
                         <button
                             onClick={() => handleTabChange('classroom')}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-md font-medium text-sm transition-all ${viewMode === 'classroom' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+                            className={`relative flex items-center gap-2 px-4 py-2 rounded-md font-medium text-sm transition-all ${viewMode === 'classroom' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
                         >
                             <School size={16} />
-                            Aula
+                            <span>Aula</span>
+                            {anyClassroomHasConflict && (
+                                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 border-2 border-slate-100 rounded-full animate-pulse" title="Hay conflictos en aulas"></span>
+                            )}
                         </button>
                     </div>
 
@@ -205,6 +235,30 @@ const ScheduleHeader = () => {
                                     return assignedCount < g.totalHours;
                                 });
 
+                                // Check for teacher conflicts (overlapping, unavailable, exceeded hours, or incomplete)
+                                const hasConflict = (() => {
+                                    const teacherAssignments = state.assignments.filter(a => a.teacherId === teacher.id);
+                                    // 1. Overlapping assignments
+                                    const slotKeys = teacherAssignments.map(a => `${a.day}-${a.timeSlotId}`);
+                                    const hasOverlap = slotKeys.some((val, i) => slotKeys.indexOf(val) !== i);
+                                    if (hasOverlap) return true;
+                                    
+                                    // 2. Unavailable slots
+                                    const hasUnavailable = teacherAssignments.some(a => 
+                                        teacher.unavailableSlots?.includes(`${a.day}-${a.timeSlotId}`)
+                                    );
+                                    if (hasUnavailable) return true;
+                                    
+                                    // 3. Exceeded max hours
+                                    if (teacher.maxHours > 0 && teacherAssignments.length > teacher.maxHours) return true;
+                                    
+                                    // 4. Incomplete assignments (missing classroom)
+                                    const hasIncomplete = teacherAssignments.some(a => !a.classroomId || a.isIncomplete);
+                                    if (hasIncomplete) return true;
+
+                                    return false;
+                                })();
+
                                 return (
                                     <button
                                         key={teacher.id}
@@ -220,9 +274,11 @@ const ScheduleHeader = () => {
                                         }}
                                     >
                                         {getInitials(teacher.name)}
-                                        {hasPending && !isSelected && (
-                                            <span className="absolute top-0 right-0 w-3 h-3 bg-amber-500 border-2 border-white rounded-full"></span>
-                                        )}
+                                        {hasConflict ? (
+                                            <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 border-2 border-white rounded-full animate-pulse shadow-md" title="Este docente tiene un conflicto u horario incompleto"></span>
+                                        ) : hasPending && !isSelected ? (
+                                            <span className="absolute top-0 right-0 w-3 h-3 bg-amber-500 border-2 border-white rounded-full" title="Tiene horas pendientes de asignar"></span>
+                                        ) : null}
                                     </button>
                                 );
                             })}
@@ -260,14 +316,46 @@ const ScheduleHeader = () => {
                                 const assignedCount = state.assignments.filter(a => a.classroomId === c.id && diurnaSlotIds.has(a.timeSlotId)).length;
                                 const totalSlots = diurnaSlots.length * 5; // 5 weekdays
                                 const percentage = totalSlots > 0 ? Math.round((assignedCount / totalSlots) * 100) : 0;
+
+                                // Check for conflicts (overlap or overcapacity)
+                                const roomAssignments = state.assignments.filter(a => a.classroomId === c.id);
+                                const slotKeys = roomAssignments.map(a => `${a.day}-${a.timeSlotId}`);
+                                const hasOverlap = slotKeys.some((val, i) => slotKeys.indexOf(val) !== i);
+                                const hasOvercapacity = roomAssignments.some(a => {
+                                    const group = state.courseGroups.find(g => g.id === a.courseGroupId);
+                                    return group ? group.studentCount > c.maxCapacity : false;
+                                });
+                                const hasConflict = hasOverlap || hasOvercapacity;
+
                                 return (
                                     <option key={c.id} value={c.id}>
-                                        {c.name} {assignedCount > 0 ? `(${percentage}% ocup.)` : ''}
+                                        {c.name} {assignedCount > 0 ? `(${percentage}% ocup.)` : ''} {hasConflict ? '⚠️' : ''}
                                     </option>
                                 );
                             })}
                         </select>
                     </div>
+
+                    {selectedClassroomId && (() => {
+                        const roomAssignments = state.assignments.filter(a => a.classroomId === selectedClassroomId);
+                        const slotKeys = roomAssignments.map(a => `${a.day}-${a.timeSlotId}`);
+                        const hasOverlap = slotKeys.some((val, i) => slotKeys.indexOf(val) !== i);
+                        const room = state.classrooms.find(c => c.id === selectedClassroomId);
+                        const hasOvercapacity = room && roomAssignments.some(a => {
+                            const group = state.courseGroups.find(g => g.id === a.courseGroupId);
+                            return group ? group.studentCount > room.maxCapacity : false;
+                        });
+
+                        if (hasOverlap || hasOvercapacity) {
+                            return (
+                                <div className="flex items-center gap-1.5 text-xs text-red-600 bg-red-50 border border-red-200 px-2.5 py-1 rounded-full animate-pulse shadow-sm shrink-0 ml-1" title="Esta aula tiene clases solapadas o capacidad excedida">
+                                    <AlertTriangle size={12} className="text-red-500" />
+                                    <span className="font-bold">Conflicto en Aula</span>
+                                </div>
+                            );
+                        }
+                        return null;
+                    })()}
 
                     <div className="h-5 w-px bg-slate-300 mx-2"></div>
 

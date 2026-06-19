@@ -1,6 +1,6 @@
 import React from 'react';
 import { Classroom, CourseGroup } from '../../../types';
-import { Calculator } from 'lucide-react';
+import { Calculator, AlertTriangle } from 'lucide-react';
 
 interface GeneratorOptionsProps {
     classrooms: Classroom[];
@@ -88,17 +88,23 @@ const GeneratorOptions = ({
                         </button>
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {previewGroups.map((group, idx) => (
-                            <div key={idx} className="bg-white border-2 border-dashed border-blue-200 p-3 rounded-lg opacity-75 hover:opacity-100 transition-opacity">
-                                <div className="flex justify-between font-bold text-slate-700 mb-2">
-                                    <span>{group.name}</span>
-                                    <span className="bg-blue-100 text-blue-700 px-2 rounded text-xs flex items-center">{group.studentCount} est.</span>
+                        {previewGroups.map((group, idx) => {
+                            const hasFewStudents = group.studentCount !== undefined && group.studentCount < 10;
+                            return (
+                                <div key={idx} className={`bg-white border-2 border-dashed p-3 rounded-lg opacity-75 hover:opacity-100 transition-opacity ${hasFewStudents ? 'border-amber-300 bg-amber-50/20' : 'border-blue-200'}`}>
+                                    <div className="flex justify-between font-bold text-slate-700 mb-2">
+                                        <span>{group.name}</span>
+                                        <span className={`px-2 rounded text-xs flex items-center gap-1 ${hasFewStudents ? 'bg-amber-100 text-amber-700 border border-amber-300' : 'bg-blue-100 text-blue-700'}`}>
+                                            {hasFewStudents && <AlertTriangle size={10} className="text-amber-500 animate-pulse" />}
+                                            {group.studentCount} est.
+                                        </span>
+                                    </div>
+                                    <div className="text-xs text-slate-500 truncate">
+                                        Sugerida: {classrooms.find(c => c.id === group.plannedClassroomId)?.name || 'Ninguna'}
+                                    </div>
                                 </div>
-                                <div className="text-xs text-slate-500 truncate">
-                                    Sugerida: {classrooms.find(c => c.id === group.plannedClassroomId)?.name || 'Ninguna'}
-                                </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
             )}
