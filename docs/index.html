@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es" style="zoom: 0.85; height: 100%; overflow: hidden">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="./vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gestor de Horarios Académicos</title>
+  <!-- PWA Settings -->
+  <link rel="manifest" href="/Horario-Docentes/assets/manifest-BVxNA0VD.json" />
+  <meta name="theme-color" content="#2563EB" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <!-- Tailwind CSS for MVP styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#2563EB',
+            secondary: '#475569',
+          }
+        }
+      }
+    }
+  </script>
+
+  <script type="importmap">
+{
+  "imports": {
+    "lucide-react": "https://esm.sh/lucide-react@^0.563.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "react/": "https://esm.sh/react@^19.2.4/",
+    "react": "https://esm.sh/react@^19.2.4"
+  }
+}
+</script>
+  <script type="module" crossorigin src="/Horario-Docentes/assets/index-DrwZ6aH1.js"></script>
+</head>
+
+<body style="margin: 0; height: 100%; overflow: hidden">
+  <div id="root" style="height: 100%"></div>
+  <script>
+    if ('serviceWorker' in navigator) {
+      // Simple no-op service worker registration for PWA installability criteria
+      // In a real build step, Vite would generate a sw.js
+      navigator.serviceWorker.register('data:application/javascript;base64,c2VsZi5hZGRFdmVudExpc3RlbmVyKCdZZXRjaCcsICgpID0+IHt9KTs=')
+        .then(() => console.log('SW Registered'))
+        .catch(() => console.log('SW Failed'));
+    }
+  </script>
+</body>
+
+</html>
