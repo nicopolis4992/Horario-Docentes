@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AppProvider } from './store';
 import {
@@ -162,7 +162,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
 const App = () => {
   return (
     <AppProvider>
-      <BrowserRouter>
+      <HashRouter>
         <AppLayout>
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -176,7 +176,7 @@ const App = () => {
             <Route path="/export" element={<ExportView />} />
           </Routes>
         </AppLayout>
-      </BrowserRouter>
+      </HashRouter>
       {/* Global Notification System */}
       <Toaster
         position="top-right"

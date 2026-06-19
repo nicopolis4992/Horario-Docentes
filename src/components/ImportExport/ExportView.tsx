@@ -277,7 +277,7 @@ const ExportView = () => {
 
                     <div className="space-y-4">
                         <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 text-sm text-slate-600">
-                            <strong>Columnas incluidas:</strong> Materia, Paralelo (1, 2, 3...), Docente, Aula, Día, Hora Inicio, Hora Fin.
+                            <strong>Columnas incluidas:</strong> Materia, Sigla, Paralelo, Docente, Aula, Tipo, Jornada, Código de Bloque, Observaciones, y más.
                         </div>
 
                         <div className="flex gap-4">

@@ -11,7 +11,7 @@ export const EXPECTED_HEADERS: Record<ImportTab, { required: string[], optional:
     },
     materias: {
         required: ['nombre', 'horas', 'estudiantesProyectados'],
-        optional: ['area', 'semestre', 'diasPreferidos', 'tipoAula', 'aulasEspecificas', 'sigla', 'carrera', 'sede', 'jornada']
+        optional: ['area', 'semestre', 'diasPreferidos', 'tipoAula', 'aulasEspecificas', 'sigla', 'carrera', 'sede', 'jornada', 'observaciones']
     },
     aulas: {
         required: ['nombre', 'tipo'],
@@ -188,6 +188,9 @@ export const mapRowToSubject = (
         else if (lower === 'v' || lower === 'vespertina') jornada = 'vespertina';
     }
 
+    // Observaciones
+    const classroomObservations = row[columnMap['observaciones']] || '';
+
     return {
         id: crypto.randomUUID(),
         name,
@@ -202,6 +205,7 @@ export const mapRowToSubject = (
         ...(requiredClassroomType && { allowedClassroomTypes: [requiredClassroomType] }),
         ...(allowedClassroomIds.length > 0 && { allowedClassroomIds }),
         ...(jornada && { jornada }),
+        ...(classroomObservations && { classroomObservations }),
         sessionPattern: [credits] // Default pattern is 1 block of N hours
     };
 };
@@ -252,8 +256,8 @@ export const downloadTemplate = (tab: ImportTab) => {
     }
     else if (tab === 'materias') {
         const headers = [...EXPECTED_HEADERS.materias.required, ...EXPECTED_HEADERS.materias.optional].join(',');
-        const row1 = "Edición de Video,3,57,Audiovisual,3,Lunes;Miércoles;Viernes,PC,PC 1;PC 2,AUD101,MULTIMEDIA Y PROD.AUDIOVISUAL,UP,D";
-        const row2 = "Programación I,4,40,Interactividad,1,,,,,,,,A";
+        const row1 = "Edición de Video,3,57,Audiovisual,3,Lunes;Miércoles;Viernes,PC,PC 1;PC 2,AUD101,MULTIMEDIA Y PROD.AUDIOVISUAL,UP,D,Necesita set de grabación";
+        const row2 = "Programación I,4,40,Interactividad,1,,,,,,,,A,";
         csvContent = [headers, row1, row2].join('\n');
         filename = "plantilla_materias.csv";
     }
