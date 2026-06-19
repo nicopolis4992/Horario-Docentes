@@ -72,101 +72,99 @@ const PrintableGrid: React.FC<{ resourceId: string, resourceType: 'teacher' | 'c
                         ))}
                     </div>
 
-                    {/* Day columns */}
-                    {DAYS.map((day, dayIdx) => {
-                        const dayAssignments = state.assignments.filter(a =>
-                            a.day === day &&
-                            (resourceType === 'teacher' ? a.teacherId === resourceId : a.classroomId === resourceId)
-                        );
-
-                        const blocks: any[] = [];
-                        const sorted = [...dayAssignments].sort((a, b) => {
-                            const groupCompare = (a.courseGroupId || '').localeCompare(b.courseGroupId || '');
-                            if (groupCompare !== 0) return groupCompare;
-                            return timeSlots.findIndex(s => s.id === a.timeSlotId) - timeSlots.findIndex(s => s.id === b.timeSlotId);
-                        });
-
-                        sorted.forEach((a: any) => {
-                            const idx = timeSlots.findIndex(s => s.id === a.timeSlotId);
-                            const lastBlock = blocks[blocks.length - 1];
-                            if (lastBlock &&
-                                lastBlock.assignment.courseGroupId === a.courseGroupId &&
-                                lastBlock.slotIndex + lastBlock.span === idx &&
-                                !a.isSplit) {
-                                lastBlock.span++;
-                                lastBlock.ids.push(a.id);
-                            } else {
-                                blocks.push({ assignment: a, span: 1, slotIndex: idx, ids: [a.id] });
-                            }
-                        });
-
-                        // Color map for areas (inline, no CSS dependency)
+                    {/* Day columns — color map uses same areas as AREA_CONFIG in utils.ts */}
+                    {(() => {
                         const areaColors: Record<string, { bg: string; border: string }> = {
-                            'Audiovisual': { bg: '#eff6ff', border: '#60a5fa' },
-                            'Diseño': { bg: '#f0fdf4', border: '#4ade80' },
-                            'Tecnología': { bg: '#fefce8', border: '#facc15' },
-                            'Humanidades': { bg: '#fdf4ff', border: '#c084fc' },
-                            'Matemáticas': { bg: '#fff7ed', border: '#fb923c' },
-                            'default': { bg: '#f8fafc', border: '#94a3b8' },
+                            'Audiovisual':    { bg: '#fff7ed', border: '#fb923c' }, // orange-50 / orange-400
+                            'Animación':      { bg: '#faf5ff', border: '#c084fc' }, // purple-50 / purple-400
+                            'Interactividad': { bg: '#ecfeff', border: '#22d3ee' }, // cyan-50   / cyan-400
+                            'default':        { bg: '#f8fafc', border: '#94a3b8' }, // slate-50  / slate-400
                         };
+                        return DAYS.map((day, dayIdx) => {
+                            const dayAssignments = state.assignments.filter(a =>
+                                a.day === day &&
+                                (resourceType === 'teacher' ? a.teacherId === resourceId : a.classroomId === resourceId)
+                            );
 
-                        return (
-                            <div key={day} style={{ position: 'relative', borderRight: dayIdx < DAYS.length - 1 ? '1px solid #e2e8f0' : 'none' }}>
-                                {/* Background rows */}
-                                {timeSlots.map(slot => (
-                                    <div key={slot.id} style={{ height: '60px', borderBottom: '1px solid #f1f5f9' }} />
-                                ))}
+                            const blocks: any[] = [];
+                            const sorted = [...dayAssignments].sort((a, b) => {
+                                const groupCompare = (a.courseGroupId || '').localeCompare(b.courseGroupId || '');
+                                if (groupCompare !== 0) return groupCompare;
+                                return timeSlots.findIndex(s => s.id === a.timeSlotId) - timeSlots.findIndex(s => s.id === b.timeSlotId);
+                            });
 
-                                {/* Assignment blocks */}
-                                {blocks.map(block => {
-                                    const { assignment, span, slotIndex } = block;
-                                    const subject = state.subjects.find(s => s.id === assignment.subjectId);
-                                    const room = state.classrooms.find(c => c.id === assignment.classroomId);
-                                    const teacher = state.teachers.find(t => t.id === assignment.teacherId);
-                                    const group = state.courseGroups.find(g => g.id === assignment.courseGroupId);
-                                    const colors = areaColors[subject?.area || 'default'] || areaColors['default'];
+                            sorted.forEach((a: any) => {
+                                const idx = timeSlots.findIndex(s => s.id === a.timeSlotId);
+                                const lastBlock = blocks[blocks.length - 1];
+                                if (lastBlock &&
+                                    lastBlock.assignment.courseGroupId === a.courseGroupId &&
+                                    lastBlock.slotIndex + lastBlock.span === idx &&
+                                    !a.isSplit) {
+                                    lastBlock.span++;
+                                    lastBlock.ids.push(a.id);
+                                } else {
+                                    blocks.push({ assignment: a, span: 1, slotIndex: idx, ids: [a.id] });
+                                }
+                            });
 
-                                    return (
-                                        <div
-                                            key={assignment.id}
-                                            style={{
-                                                position: 'absolute',
-                                                top: `${slotIndex * 60}px`,
-                                                height: `${span * 60}px`,
-                                                left: 0,
-                                                right: 0,
-                                                padding: '2px',
-                                                zIndex: 10,
-                                                boxSizing: 'border-box',
-                                            }}
-                                        >
-                                            <div style={{
-                                                height: '100%',
-                                                borderRadius: '4px',
-                                                border: `2px solid ${colors.border}`,
-                                                backgroundColor: colors.bg,
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                padding: '6px',
-                                                overflow: 'hidden',
-                                                boxSizing: 'border-box',
-                                            }}>
-                                                <div style={{ ...fontBase, fontWeight: 'bold', fontSize: '10px', color: '#1e293b', lineHeight: '1.3' }}>
-                                                    {subject?.name || 'Materia'}
-                                                </div>
-                                                <div style={{ ...fontBase, fontSize: '9px', color: '#475569', marginTop: '2px' }}>
-                                                    {group?.name || 'Clase'}
-                                                </div>
-                                                <div style={{ ...fontBase, marginTop: 'auto', paddingTop: '4px', fontSize: '9px', fontWeight: 'bold', color: '#334155' }}>
-                                                    {resourceType === 'teacher' ? room?.name : teacher?.name}
+                            return (
+                                <div key={day} style={{ position: 'relative', borderRight: dayIdx < DAYS.length - 1 ? '1px solid #e2e8f0' : 'none' }}>
+                                    {/* Background rows */}
+                                    {timeSlots.map(slot => (
+                                        <div key={slot.id} style={{ height: '60px', borderBottom: '1px solid #f1f5f9' }} />
+                                    ))}
+
+                                    {/* Assignment blocks */}
+                                    {blocks.map(block => {
+                                        const { assignment, span, slotIndex } = block;
+                                        const subject = state.subjects.find(s => s.id === assignment.subjectId);
+                                        const room = state.classrooms.find(c => c.id === assignment.classroomId);
+                                        const teacher = state.teachers.find(t => t.id === assignment.teacherId);
+                                        const group = state.courseGroups.find(g => g.id === assignment.courseGroupId);
+                                        const colors = areaColors[subject?.area || 'default'] || areaColors['default'];
+
+                                        return (
+                                            <div
+                                                key={assignment.id}
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: `${slotIndex * 60}px`,
+                                                    height: `${span * 60}px`,
+                                                    left: 0,
+                                                    right: 0,
+                                                    padding: '2px',
+                                                    zIndex: 10,
+                                                    boxSizing: 'border-box',
+                                                }}
+                                            >
+                                                <div style={{
+                                                    height: '100%',
+                                                    borderRadius: '4px',
+                                                    border: `2px solid ${colors.border}`,
+                                                    backgroundColor: colors.bg,
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    padding: '6px',
+                                                    overflow: 'hidden',
+                                                    boxSizing: 'border-box',
+                                                }}>
+                                                    <div style={{ ...fontBase, fontWeight: 'bold', fontSize: '10px', color: '#1e293b', lineHeight: '1.3' }}>
+                                                        {subject?.name || 'Materia'}
+                                                    </div>
+                                                    <div style={{ ...fontBase, fontSize: '9px', color: '#475569', marginTop: '2px' }}>
+                                                        {group?.name || 'Clase'}
+                                                    </div>
+                                                    <div style={{ ...fontBase, marginTop: 'auto', paddingTop: '4px', fontSize: '9px', fontWeight: 'bold', color: '#334155' }}>
+                                                        {resourceType === 'teacher' ? room?.name : teacher?.name}
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        );
-                    })}
+                                        );
+                                    })}
+                                </div>
+                            );
+                        });
+                    })()}
                 </div>
             </div>
         </div>
