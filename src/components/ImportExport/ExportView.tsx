@@ -4,7 +4,7 @@ import { useAppStore } from '../../../store';
 import { generateExportData, downloadCSV, downloadXLSX, captureAndDownloadImage, captureToPDF, captureAllAsZip, downloadProjectJSON } from './exportHelpers';
 import { jsPDF } from 'jspdf';
 import { DAYS } from '../Schedule/useScheduleLogic';
-import { generateTimeSlots, AREA_CONFIG } from '../../../utils';
+import { generateTimeSlots } from '../../../utils';
 import toast from 'react-hot-toast';
 
 const PrintableGrid: React.FC<{ resourceId: string, resourceType: 'teacher' | 'classroom' }> = ({ resourceId, resourceType }) => {
@@ -30,6 +30,35 @@ const PrintableGrid: React.FC<{ resourceId: string, resourceType: 'teacher' | 'c
         letterSpacing: 'normal',
         WebkitFontSmoothing: 'antialiased',
     };
+
+    // --- Build per-subject color map ---
+    // 12 visually distinct palettes (bg / border), works for html2canvas (all hex, no Tailwind)
+    const SUBJECT_PALETTE: { bg: string; border: string }[] = [
+        { bg: '#fff7ed', border: '#f97316' }, // orange
+        { bg: '#eff6ff', border: '#3b82f6' }, // blue
+        { bg: '#f0fdf4', border: '#22c55e' }, // green
+        { bg: '#fdf4ff', border: '#a855f7' }, // purple
+        { bg: '#ecfeff', border: '#06b6d4' }, // cyan
+        { bg: '#fff1f2', border: '#f43f5e' }, // rose
+        { bg: '#fefce8', border: '#eab308' }, // yellow
+        { bg: '#f0fdfa', border: '#14b8a6' }, // teal
+        { bg: '#f5f3ff', border: '#8b5cf6' }, // violet
+        { bg: '#fff0eb', border: '#ef4444' }, // red
+        { bg: '#ecfdf5', border: '#10b981' }, // emerald
+        { bg: '#fef3c7', border: '#d97706' }, // amber
+    ];
+
+    // Collect unique subjectIds that appear in this resource's schedule, in stable order
+    const uniqueSubjectIds = Array.from(
+        new Set(resourceAssignments.map(a => a.subjectId).filter(Boolean))
+    );
+
+    // Map subjectId -> palette entry (wraps around if > 12 subjects)
+    const subjectColorMap: Record<string, { bg: string; border: string }> = {};
+    uniqueSubjectIds.forEach((subjectId, idx) => {
+        subjectColorMap[subjectId] = SUBJECT_PALETTE[idx % SUBJECT_PALETTE.length];
+    });
+    const DEFAULT_COLOR = { bg: '#f8fafc', border: '#94a3b8' };
 
     return (
         <div
@@ -72,99 +101,91 @@ const PrintableGrid: React.FC<{ resourceId: string, resourceType: 'teacher' | 'c
                         ))}
                     </div>
 
-                    {/* Day columns — color map uses same areas as AREA_CONFIG in utils.ts */}
-                    {(() => {
-                        const areaColors: Record<string, { bg: string; border: string }> = {
-                            'Audiovisual':    { bg: '#fff7ed', border: '#fb923c' }, // orange-50 / orange-400
-                            'Animación':      { bg: '#faf5ff', border: '#c084fc' }, // purple-50 / purple-400
-                            'Interactividad': { bg: '#ecfeff', border: '#22d3ee' }, // cyan-50   / cyan-400
-                            'default':        { bg: '#f8fafc', border: '#94a3b8' }, // slate-50  / slate-400
-                        };
-                        return DAYS.map((day, dayIdx) => {
-                            const dayAssignments = state.assignments.filter(a =>
-                                a.day === day &&
-                                (resourceType === 'teacher' ? a.teacherId === resourceId : a.classroomId === resourceId)
-                            );
+                    {/* Day columns — each subject gets a unique color from the palette */}
+                    {DAYS.map((day, dayIdx) => {
+                        const dayAssignments = state.assignments.filter(a =>
+                            a.day === day &&
+                            (resourceType === 'teacher' ? a.teacherId === resourceId : a.classroomId === resourceId)
+                        );
 
-                            const blocks: any[] = [];
-                            const sorted = [...dayAssignments].sort((a, b) => {
-                                const groupCompare = (a.courseGroupId || '').localeCompare(b.courseGroupId || '');
-                                if (groupCompare !== 0) return groupCompare;
-                                return timeSlots.findIndex(s => s.id === a.timeSlotId) - timeSlots.findIndex(s => s.id === b.timeSlotId);
-                            });
+                        const blocks: any[] = [];
+                        const sorted = [...dayAssignments].sort((a, b) => {
+                            const groupCompare = (a.courseGroupId || '').localeCompare(b.courseGroupId || '');
+                            if (groupCompare !== 0) return groupCompare;
+                            return timeSlots.findIndex(s => s.id === a.timeSlotId) - timeSlots.findIndex(s => s.id === b.timeSlotId);
+                        });
 
-                            sorted.forEach((a: any) => {
-                                const idx = timeSlots.findIndex(s => s.id === a.timeSlotId);
-                                const lastBlock = blocks[blocks.length - 1];
-                                if (lastBlock &&
-                                    lastBlock.assignment.courseGroupId === a.courseGroupId &&
-                                    lastBlock.slotIndex + lastBlock.span === idx &&
-                                    !a.isSplit) {
-                                    lastBlock.span++;
-                                    lastBlock.ids.push(a.id);
-                                } else {
-                                    blocks.push({ assignment: a, span: 1, slotIndex: idx, ids: [a.id] });
-                                }
-                            });
+                        sorted.forEach((a: any) => {
+                            const idx = timeSlots.findIndex(s => s.id === a.timeSlotId);
+                            const lastBlock = blocks[blocks.length - 1];
+                            if (lastBlock &&
+                                lastBlock.assignment.courseGroupId === a.courseGroupId &&
+                                lastBlock.slotIndex + lastBlock.span === idx &&
+                                !a.isSplit) {
+                                lastBlock.span++;
+                                lastBlock.ids.push(a.id);
+                            } else {
+                                blocks.push({ assignment: a, span: 1, slotIndex: idx, ids: [a.id] });
+                            }
+                        });
 
-                            return (
-                                <div key={day} style={{ position: 'relative', borderRight: dayIdx < DAYS.length - 1 ? '1px solid #e2e8f0' : 'none' }}>
-                                    {/* Background rows */}
-                                    {timeSlots.map(slot => (
-                                        <div key={slot.id} style={{ height: '60px', borderBottom: '1px solid #f1f5f9' }} />
-                                    ))}
+                        return (
+                            <div key={day} style={{ position: 'relative', borderRight: dayIdx < DAYS.length - 1 ? '1px solid #e2e8f0' : 'none' }}>
+                                {/* Background rows */}
+                                {timeSlots.map(slot => (
+                                    <div key={slot.id} style={{ height: '60px', borderBottom: '1px solid #f1f5f9' }} />
+                                ))}
 
-                                    {/* Assignment blocks */}
-                                    {blocks.map(block => {
-                                        const { assignment, span, slotIndex } = block;
-                                        const subject = state.subjects.find(s => s.id === assignment.subjectId);
-                                        const room = state.classrooms.find(c => c.id === assignment.classroomId);
-                                        const teacher = state.teachers.find(t => t.id === assignment.teacherId);
-                                        const group = state.courseGroups.find(g => g.id === assignment.courseGroupId);
-                                        const colors = areaColors[subject?.area || 'default'] || areaColors['default'];
+                                {/* Assignment blocks */}
+                                {blocks.map(block => {
+                                    const { assignment, span, slotIndex } = block;
+                                    const subject = state.subjects.find(s => s.id === assignment.subjectId);
+                                    const room = state.classrooms.find(c => c.id === assignment.classroomId);
+                                    const teacher = state.teachers.find(t => t.id === assignment.teacherId);
+                                    const group = state.courseGroups.find(g => g.id === assignment.courseGroupId);
+                                    const colors = subjectColorMap[assignment.subjectId] || DEFAULT_COLOR;
 
-                                        return (
-                                            <div
-                                                key={assignment.id}
-                                                style={{
-                                                    position: 'absolute',
-                                                    top: `${slotIndex * 60}px`,
-                                                    height: `${span * 60}px`,
-                                                    left: 0,
-                                                    right: 0,
-                                                    padding: '2px',
-                                                    zIndex: 10,
-                                                    boxSizing: 'border-box',
-                                                }}
-                                            >
-                                                <div style={{
-                                                    height: '100%',
-                                                    borderRadius: '4px',
-                                                    border: `2px solid ${colors.border}`,
-                                                    backgroundColor: colors.bg,
-                                                    display: 'flex',
-                                                    flexDirection: 'column',
-                                                    padding: '6px',
-                                                    overflow: 'hidden',
-                                                    boxSizing: 'border-box',
-                                                }}>
-                                                    <div style={{ ...fontBase, fontWeight: 'bold', fontSize: '10px', color: '#1e293b', lineHeight: '1.3' }}>
-                                                        {subject?.name || 'Materia'}
-                                                    </div>
-                                                    <div style={{ ...fontBase, fontSize: '9px', color: '#475569', marginTop: '2px' }}>
-                                                        {group?.name || 'Clase'}
-                                                    </div>
-                                                    <div style={{ ...fontBase, marginTop: 'auto', paddingTop: '4px', fontSize: '9px', fontWeight: 'bold', color: '#334155' }}>
-                                                        {resourceType === 'teacher' ? room?.name : teacher?.name}
-                                                    </div>
+                                    return (
+                                        <div
+                                            key={assignment.id}
+                                            style={{
+                                                position: 'absolute',
+                                                top: `${slotIndex * 60}px`,
+                                                height: `${span * 60}px`,
+                                                left: 0,
+                                                right: 0,
+                                                padding: '2px',
+                                                zIndex: 10,
+                                                boxSizing: 'border-box',
+                                            }}
+                                        >
+                                            <div style={{
+                                                height: '100%',
+                                                borderRadius: '4px',
+                                                border: `2px solid ${colors.border}`,
+                                                backgroundColor: colors.bg,
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                padding: '6px',
+                                                overflow: 'hidden',
+                                                boxSizing: 'border-box',
+                                            }}>
+                                                <div style={{ ...fontBase, fontWeight: 'bold', fontSize: '10px', color: '#1e293b', lineHeight: '1.3' }}>
+                                                    {subject?.name || 'Materia'}
+                                                </div>
+                                                <div style={{ ...fontBase, fontSize: '9px', color: '#475569', marginTop: '2px' }}>
+                                                    {group?.name || 'Clase'}
+                                                </div>
+                                                <div style={{ ...fontBase, marginTop: 'auto', paddingTop: '4px', fontSize: '9px', fontWeight: 'bold', color: '#334155' }}>
+                                                    {resourceType === 'teacher' ? room?.name : teacher?.name}
                                                 </div>
                                             </div>
-                                        );
-                                    })}
-                                </div>
-                            );
-                        });
-                    })()}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
         </div>
