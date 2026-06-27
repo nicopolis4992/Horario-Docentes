@@ -25,6 +25,7 @@ interface AssignmentModalProps {
     editingAssignmentIds: string[] | null;
     pendingSessions: PendingSession[];
     state: AppState;
+    timeSlots: TimeSlot[];
     viewMode: 'teacher' | 'classroom';
     selectedTeacherId: string | null;
     selectedClassroomId: string | null;
@@ -48,6 +49,7 @@ const AssignmentModal: React.FC<AssignmentModalProps> = ({
     editingAssignmentIds,
     pendingSessions,
     state,
+    timeSlots,
     viewMode,
     selectedTeacherId,
     selectedClassroomId,
@@ -58,6 +60,33 @@ const AssignmentModal: React.FC<AssignmentModalProps> = ({
     onClassroomChange,
     onSave
 }) => {
+    // Span real del bloque: todas las horas de la asignación en edición, o de la sesión pendiente seleccionada
+    const selectedSession = pendingSessions.find(s => s.id === selectedGroupId);
+    const blockSpan = editingAssignmentIds && editingAssignmentIds.length > 0
+        ? editingAssignmentIds.length
+        : (selectedSession ? selectedSession.hours : 1);
+
+    // Revisa ocupación en TODAS las horas del bloque (no solo la primera), excluyendo las propias asignaciones si se está editando
+    const isResourceBusyAcrossBlock = (resourceKey: 'teacherId' | 'classroomId', resourceId: string): boolean => {
+        if (!selectedCell) return false;
+        const startIdx = timeSlots.findIndex(s => s.id === selectedCell.slot.id);
+        if (startIdx === -1) return false;
+
+        for (let i = 0; i < blockSpan; i++) {
+            const slot = timeSlots[startIdx + i];
+            if (!slot) break;
+
+            const busy = state.assignments.some(a =>
+                a[resourceKey] === resourceId &&
+                a.day === selectedCell.day &&
+                a.timeSlotId === slot.id &&
+                !(editingAssignmentIds && editingAssignmentIds.includes(a.id))
+            );
+            if (busy) return true;
+        }
+        return false;
+    };
+
     return (
         <Modal
             isOpen={isOpen}
@@ -238,11 +267,7 @@ const AssignmentModal: React.FC<AssignmentModalProps> = ({
                                 const unavailableKey = `${selectedCell.day}-${selectedCell.slot.id}`;
                                 const isBlocked = t.unavailableSlots?.includes(unavailableKey);
 
-                                const isBusy = state.assignments.some(a =>
-                                    a.teacherId === t.id &&
-                                    a.day === selectedCell.day &&
-                                    a.timeSlotId === selectedCell.slot.id
-                                );
+                                const isBusy = isResourceBusyAcrossBlock('teacherId', t.id);
 
                                 return (
                                     <option
@@ -277,11 +302,7 @@ const AssignmentModal: React.FC<AssignmentModalProps> = ({
                             <option value="">Selecciona un aula...</option>
                             {state.classrooms.map(c => {
                                 if (!selectedCell) return null;
-                                const isBusy = state.assignments.some(a =>
-                                    a.classroomId === c.id &&
-                                    a.day === selectedCell.day &&
-                                    a.timeSlotId === selectedCell.slot.id
-                                );
+                                const isBusy = isResourceBusyAcrossBlock('classroomId', c.id);
                                 return (
                                     <option
                                         key={c.id}

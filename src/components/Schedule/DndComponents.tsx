@@ -110,6 +110,30 @@ export const DroppableCell: React.FC<DroppableCellProps> = ({ id, day, slotId, i
     );
 };
 
+interface DroppablePendingZoneProps {
+    children?: React.ReactNode;
+    isActive?: boolean;
+}
+
+export const DroppablePendingZone: React.FC<DroppablePendingZoneProps> = ({ children, isActive }) => {
+    const { isOver, setNodeRef } = useDroppable({
+        id: 'pending-zone',
+        data: {
+            type: 'pending-zone'
+        }
+    });
+
+    return (
+        <div
+            ref={setNodeRef}
+            className={`flex-1 min-h-0 flex flex-col transition-colors rounded-lg ${isOver ? 'bg-red-50 ring-2 ring-inset ring-red-300' : isActive ? 'bg-amber-50/50 ring-1 ring-inset ring-amber-200' : ''
+                }`}
+        >
+            {children}
+        </div>
+    );
+};
+
 interface DraggableAssignmentBlockProps {
     id: string;
     day: string;

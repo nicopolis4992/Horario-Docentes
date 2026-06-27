@@ -1,6 +1,6 @@
 import React from 'react';
-import { Layers, Eye, EyeOff } from 'lucide-react';
-import { DraggableSession } from './DndComponents';
+import { Layers, Eye, EyeOff, CornerDownLeft } from 'lucide-react';
+import { DraggableSession, DroppablePendingZone } from './DndComponents';
 import { PendingSession } from './useScheduleLogic';
 import { Subject, Teacher, Classroom, CourseGroup } from '../../../types';
 
@@ -15,6 +15,7 @@ interface PendingSidebarProps {
     onToggleShowAll: (value: boolean) => void;
     isSidebarOpen: boolean;
     onEditSession?: (session: PendingSession) => void;
+    isAssignmentDragActive?: boolean;
 }
 
 const PendingSidebar: React.FC<PendingSidebarProps> = ({
@@ -27,7 +28,8 @@ const PendingSidebar: React.FC<PendingSidebarProps> = ({
     showAllPending,
     onToggleShowAll,
     isSidebarOpen,
-    onEditSession
+    onEditSession,
+    isAssignmentDragActive
 }) => {
     if (!isSidebarOpen) return null;
 
@@ -54,29 +56,37 @@ const PendingSidebar: React.FC<PendingSidebarProps> = ({
                     {showAllPending ? (viewMode === 'classroom' ? 'Solo esta aula' : 'Solo este docente') : 'Ver todos'}
                 </button>
             </div>
-            <div className="flex-1 max-h-[600px] overflow-y-auto p-2 space-y-2">
-                {pendingSessions.length === 0 ? (
-                    <div className="text-center p-4 text-slate-400 text-xs italic">
-                        Todo planificado 🎉
-                    </div>
-                ) : (
-                    pendingSessions.map(session => {
-                        const group = courseGroups.find(g => g.id === session.groupId);
-                        const teacher = group?.teacherId ? teachers.find(t => t.id === group.teacherId) : undefined;
-                        const classroom = group?.plannedClassroomId ? classrooms.find(c => c.id === group.plannedClassroomId) : undefined;
-                        return (
-                            <DraggableSession
-                                key={session.id}
-                                session={session}
-                                subjectName={subjects.find(s => s.id === session.subjectId)?.name || 'Materia'}
-                                teacherName={teacher?.name}
-                                classroomName={classroom?.name}
-                                onEdit={onEditSession ? () => onEditSession(session) : undefined}
-                            />
-                        );
-                    })
-                )}
-            </div>
+            <DroppablePendingZone isActive={isAssignmentDragActive}>
+                <div className="flex-1 max-h-[600px] overflow-y-auto p-2 space-y-2">
+                    {isAssignmentDragActive && (
+                        <div className="flex items-center justify-center gap-2 text-[11px] font-bold text-amber-600 bg-amber-50 border border-dashed border-amber-300 rounded-lg p-2 mb-1">
+                            <CornerDownLeft size={12} />
+                            Suelta aquí para devolver a pendientes
+                        </div>
+                    )}
+                    {pendingSessions.length === 0 ? (
+                        <div className="text-center p-4 text-slate-400 text-xs italic">
+                            Todo planificado 🎉
+                        </div>
+                    ) : (
+                        pendingSessions.map(session => {
+                            const group = courseGroups.find(g => g.id === session.groupId);
+                            const teacher = group?.teacherId ? teachers.find(t => t.id === group.teacherId) : undefined;
+                            const classroom = group?.plannedClassroomId ? classrooms.find(c => c.id === group.plannedClassroomId) : undefined;
+                            return (
+                                <DraggableSession
+                                    key={session.id}
+                                    session={session}
+                                    subjectName={subjects.find(s => s.id === session.subjectId)?.name || 'Materia'}
+                                    teacherName={teacher?.name}
+                                    classroomName={classroom?.name}
+                                    onEdit={onEditSession ? () => onEditSession(session) : undefined}
+                                />
+                            );
+                        })
+                    )}
+                </div>
+            </DroppablePendingZone>
         </div>
     );
 };

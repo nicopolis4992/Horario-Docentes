@@ -28,6 +28,7 @@ const ScheduleViewContent = () => {
                     showAllPending={logic.showAllPending}
                     onToggleShowAll={logic.setShowAllPending}
                     isSidebarOpen={logic.isSidebarOpen}
+                    isAssignmentDragActive={!!logic.activeId && !!logic.activeAssignment}
                     onEditSession={(session) => {
                         logic.openAssignmentModal(
                             'Lunes' as any,
@@ -62,6 +63,7 @@ const ScheduleViewContent = () => {
                         editingAssignmentIds={logic.editingAssignmentIds}
                         pendingSessions={logic.pendingSessions}
                         state={logic.state}
+                        timeSlots={logic.timeSlots}
                         viewMode={logic.viewMode}
                         selectedTeacherId={logic.selectedTeacherId}
                         selectedClassroomId={logic.selectedClassroomId}

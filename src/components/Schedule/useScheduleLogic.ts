@@ -225,6 +225,19 @@ export const useScheduleLogic = () => {
                 handleReassignTeacher(original.courseGroupId, formTeacherId);
             }
 
+            // Validate the FULL block span (not just the first hour) excluding the assignments being edited
+            const validation = original
+                ? validateMove(
+                    original.day,
+                    original.timeSlotId,
+                    editingAssignmentIds.length,
+                    formTeacherId,
+                    formClassroomId,
+                    formSubjectId,
+                    editingAssignmentIds
+                )
+                : { valid: true, error: undefined };
+
             editingAssignmentIds.forEach(id => {
                 const current = state.assignments.find(a => a.id === id);
                 if (current) {
@@ -234,12 +247,17 @@ export const useScheduleLogic = () => {
                             ...current,
                             teacherId: formTeacherId,
                             classroomId: formClassroomId,
-                            isIncomplete: !formTeacherId || !formClassroomId
+                            isIncomplete: !formTeacherId || !formClassroomId || !validation.valid
                         }
                     });
                 }
             });
-            toast.success('Horario actualizado');
+
+            if (!validation.valid) {
+                toast(`⚠️ Actualizado con conflicto: ${validation.error}`, { icon: '⚠️' });
+            } else {
+                toast.success('Horario actualizado');
+            }
         } else if (assignMode === 'group' && selectedGroupId) {
             const session = pendingSessions.find(s => s.id === selectedGroupId) || allPendingSessions.find(s => s.id === selectedGroupId);
             if (session) {
@@ -360,7 +378,19 @@ export const useScheduleLogic = () => {
         const { active, over } = event;
         setActiveId(null);
 
-        if (!over || over.data.current?.type !== 'cell') return;
+        if (!over) return;
+
+        if (over.data.current?.type === 'pending-zone') {
+            // Dropping an existing assignment block onto the pending sidebar returns it to "pendientes"
+            if (active.data.current?.type === 'assignment') {
+                const { assignmentIds } = active.data.current;
+                dispatch({ type: 'DELETE_MULTIPLE_ASSIGNMENTS', payload: assignmentIds });
+                toast.success('Clase devuelta a pendientes');
+            }
+            return;
+        }
+
+        if (over.data.current?.type !== 'cell') return;
 
         const dropDay = over.data.current.day as DayOfWeek;
         const dropSlotId = over.data.current.slotId;

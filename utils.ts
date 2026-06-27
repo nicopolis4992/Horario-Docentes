@@ -126,6 +126,7 @@ export const CLASSROOM_CONFIG: Record<ClassroomType, { label: string; color: str
 // Configurable dropdown lists
 export const CARRERAS: string[] = [
   'MULTIMEDIA Y PROD.AUDIOVISUAL',
+  'PSICOLOGÍA',
 ];
 
 export const SEDES: string[] = [
