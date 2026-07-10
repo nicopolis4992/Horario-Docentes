@@ -36,6 +36,12 @@ const SubjectsView = () => {
     // Controls if we are showing the custom input field for credits
     const [isCustomCreditsMode, setIsCustomCreditsMode] = useState(false);
     const [isAulasAccordionOpen, setIsAulasAccordionOpen] = useState(false);
+    const [newCarreraModalOpen, setNewCarreraModalOpen] = useState(false);
+    const [newCarreraInput, setNewCarreraInput] = useState('');
+    const [newSedeModalOpen, setNewSedeModalOpen] = useState(false);
+    const [newSedeInput, setNewSedeInput] = useState('');
+    const [extraCarreras, setExtraCarreras] = useState<string[]>([]);
+    const [extraSedes, setExtraSedes] = useState<string[]>([]);
 
     const allTimeSlots = generateTimeSlots();
 
@@ -77,6 +83,12 @@ const SubjectsView = () => {
             setIsCustomCreditsMode(false);
             setIsAulasAccordionOpen(false);
         }
+        setNewCarreraModalOpen(false);
+        setNewCarreraInput('');
+        setNewSedeModalOpen(false);
+        setNewSedeInput('');
+        setExtraCarreras([]);
+        setExtraSedes([]);
         setIsModalOpen(true);
     };
 
@@ -146,6 +158,10 @@ const SubjectsView = () => {
     };
 
     const days: DayOfWeek[] = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+    const dynamicCarreras = [...new Set([...CARRERAS, ...state.subjects.map(s => s.carrera).filter(Boolean) as string[], ...extraCarreras])];
+    const dynamicSedes = [...new Set([...SEDES, ...state.subjects.map(s => s.sede).filter(Boolean) as string[], ...extraSedes])];
+    const isMultimediaCarrera = (formData.carrera || '').toUpperCase().includes('MULTIMEDIA');
 
     return (
         <div className="space-y-6">
@@ -322,12 +338,20 @@ const SubjectsView = () => {
                             <select
                                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-slate-900 bg-white"
                                 value={formData.carrera || ''}
-                                onChange={e => setFormData({ ...formData, carrera: e.target.value })}
+                                onChange={e => {
+                                    if (e.target.value === '__new__') {
+                                        setNewCarreraInput('');
+                                        setNewCarreraModalOpen(true);
+                                    } else {
+                                        setFormData({ ...formData, carrera: e.target.value });
+                                    }
+                                }}
                             >
                                 <option value="">-- Seleccionar --</option>
-                                {CARRERAS.map(c => (
+                                {dynamicCarreras.map(c => (
                                     <option key={c} value={c}>{c}</option>
                                 ))}
+                                <option value="__new__">+ Crear nueva carrera...</option>
                             </select>
                         </div>
                         <div>
@@ -335,39 +359,49 @@ const SubjectsView = () => {
                             <select
                                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-slate-900 bg-white"
                                 value={formData.sede || ''}
-                                onChange={e => setFormData({ ...formData, sede: e.target.value })}
+                                onChange={e => {
+                                    if (e.target.value === '__new__') {
+                                        setNewSedeInput('');
+                                        setNewSedeModalOpen(true);
+                                    } else {
+                                        setFormData({ ...formData, sede: e.target.value });
+                                    }
+                                }}
                             >
                                 <option value="">-- Seleccionar --</option>
-                                {SEDES.map(s => (
+                                {dynamicSedes.map(s => (
                                     <option key={s} value={s}>{s}</option>
                                 ))}
+                                <option value="__new__">+ Crear nueva sede...</option>
                             </select>
                         </div>
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">Eje / Área</label>
-                        <div className="flex flex-wrap gap-2">
-                            {(Object.keys(AREA_CONFIG) as SubjectArea[]).map((area) => {
-                                const config = AREA_CONFIG[area];
-                                const isSelected = formData.area === area;
-                                return (
-                                    <button
-                                        key={area}
-                                        type="button"
-                                        onClick={() => setFormData({ ...formData, area })}
-                                        className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all flex items-center gap-2 ${isSelected
-                                            ? `${config.bg} ${config.border} ${config.iconColor} ring-1 ring-offset-1 ring-${config.color.split('-')[1]}-400`
-                                            : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
-                                            }`}
-                                    >
-                                        <div className={`w-2 h-2 rounded-full ${isSelected ? config.iconColor.replace('text', 'bg') : 'bg-slate-300'}`}></div>
-                                        {area}
-                                    </button>
-                                );
-                            })}
+                    {isMultimediaCarrera && (
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-2">Eje / Área</label>
+                            <div className="flex flex-wrap gap-2">
+                                {(Object.keys(AREA_CONFIG) as SubjectArea[]).map((area) => {
+                                    const config = AREA_CONFIG[area];
+                                    const isSelected = formData.area === area;
+                                    return (
+                                        <button
+                                            key={area}
+                                            type="button"
+                                            onClick={() => setFormData({ ...formData, area })}
+                                            className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all flex items-center gap-2 ${isSelected
+                                                ? `${config.bg} ${config.border} ${config.iconColor} ring-1 ring-offset-1 ring-${config.color.split('-')[1]}-400`
+                                                : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                                                }`}
+                                        >
+                                            <div className={`w-2 h-2 rounded-full ${isSelected ? config.iconColor.replace('text', 'bg') : 'bg-slate-300'}`}></div>
+                                            {area}
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     {/* Jornada Toggle */}
                     <div>
@@ -651,6 +685,122 @@ const SubjectsView = () => {
                     </div>
                 </form>
             </Modal>
+
+            {/* Mini-modal: nueva carrera */}
+            {newCarreraModalOpen && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-sm animate-fade-in">
+                        <div className="px-5 py-4 border-b border-slate-100 bg-slate-50 rounded-t-xl">
+                            <h3 className="font-bold text-base text-slate-800">Nueva Carrera</h3>
+                        </div>
+                        <div className="p-5 space-y-4">
+                            <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-700">
+                                <span className="mt-0.5">⚠️</span>
+                                <span>Usa el nombre correcto de la carrera. Este nombre se usará en la exportación y debe coincidir exactamente con el nombre oficial.</span>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Nombre de la carrera</label>
+                                <input
+                                    type="text"
+                                    autoFocus
+                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-slate-900"
+                                    placeholder="Ej: INGENIERÍA EN SISTEMAS"
+                                    value={newCarreraInput}
+                                    onChange={e => setNewCarreraInput(e.target.value.toUpperCase())}
+                                    onKeyDown={e => {
+                                        if (e.key === 'Enter' && newCarreraInput.trim()) {
+                                            const val = newCarreraInput.trim();
+                                            setExtraCarreras(prev => [...prev, val]);
+                                            setFormData({ ...formData, carrera: val });
+                                            setNewCarreraModalOpen(false);
+                                        } else if (e.key === 'Escape') {
+                                            setNewCarreraModalOpen(false);
+                                        }
+                                    }}
+                                />
+                            </div>
+                            <div className="flex gap-2 pt-1">
+                                <button
+                                    type="button"
+                                    onClick={() => setNewCarreraModalOpen(false)}
+                                    className="flex-1 px-4 py-2 text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors text-sm font-medium"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="button"
+                                    disabled={!newCarreraInput.trim()}
+                                    onClick={() => {
+                                        const val = newCarreraInput.trim();
+                                        setExtraCarreras(prev => [...prev, val]);
+                                        setFormData({ ...formData, carrera: val });
+                                        setNewCarreraModalOpen(false);
+                                    }}
+                                    className="flex-1 px-4 py-2 text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors text-sm font-medium"
+                                >
+                                    Crear
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Mini-modal: nueva sede */}
+            {newSedeModalOpen && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-sm animate-fade-in">
+                        <div className="px-5 py-4 border-b border-slate-100 bg-slate-50 rounded-t-xl">
+                            <h3 className="font-bold text-base text-slate-800">Nueva Sede</h3>
+                        </div>
+                        <div className="p-5 space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Nombre de la sede</label>
+                                <input
+                                    type="text"
+                                    autoFocus
+                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-slate-900"
+                                    placeholder="Ej: QUITO NORTE"
+                                    value={newSedeInput}
+                                    onChange={e => setNewSedeInput(e.target.value.toUpperCase())}
+                                    onKeyDown={e => {
+                                        if (e.key === 'Enter' && newSedeInput.trim()) {
+                                            const val = newSedeInput.trim();
+                                            setExtraSedes(prev => [...prev, val]);
+                                            setFormData({ ...formData, sede: val });
+                                            setNewSedeModalOpen(false);
+                                        } else if (e.key === 'Escape') {
+                                            setNewSedeModalOpen(false);
+                                        }
+                                    }}
+                                />
+                            </div>
+                            <div className="flex gap-2 pt-1">
+                                <button
+                                    type="button"
+                                    onClick={() => setNewSedeModalOpen(false)}
+                                    className="flex-1 px-4 py-2 text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors text-sm font-medium"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="button"
+                                    disabled={!newSedeInput.trim()}
+                                    onClick={() => {
+                                        const val = newSedeInput.trim();
+                                        setExtraSedes(prev => [...prev, val]);
+                                        setFormData({ ...formData, sede: val });
+                                        setNewSedeModalOpen(false);
+                                    }}
+                                    className="flex-1 px-4 py-2 text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors text-sm font-medium"
+                                >
+                                    Crear
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
