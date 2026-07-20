@@ -17,7 +17,8 @@ import {
     Check,
     ChevronDown,
     Sun,
-    Moon
+    Moon,
+    AlertTriangle
 } from 'lucide-react';
 import { AREA_CONFIG, CLASSROOM_CONFIG, CARRERAS, SEDES, generateTimeSlots } from '../../../utils';
 import Modal from '../Common/Modal';
@@ -36,6 +37,7 @@ const SubjectsView = () => {
     // Controls if we are showing the custom input field for credits
     const [isCustomCreditsMode, setIsCustomCreditsMode] = useState(false);
     const [isAulasAccordionOpen, setIsAulasAccordionOpen] = useState(false);
+    const [confirmClearOpen, setConfirmClearOpen] = useState(false);
     const [newCarreraModalOpen, setNewCarreraModalOpen] = useState(false);
     const [newCarreraInput, setNewCarreraInput] = useState('');
     const [newSedeModalOpen, setNewSedeModalOpen] = useState(false);
@@ -170,13 +172,24 @@ const SubjectsView = () => {
                     <h2 className="text-2xl font-bold text-slate-800">Materias</h2>
                     <p className="text-slate-500 text-sm">Define el plan académico y sus áreas.</p>
                 </div>
-                <button
-                    onClick={() => handleOpenModal()}
-                    className="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition-colors shadow-sm"
-                >
-                    <Plus size={18} />
-                    <span>Nueva Materia</span>
-                </button>
+                <div className="flex gap-2">
+                    {state.subjects.length > 0 && (
+                        <button
+                            onClick={() => setConfirmClearOpen(true)}
+                            className="flex items-center space-x-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-4 py-2 rounded-lg transition-colors"
+                        >
+                            <Trash2 size={16} />
+                            <span>Borrar todo</span>
+                        </button>
+                    )}
+                    <button
+                        onClick={() => handleOpenModal()}
+                        className="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition-colors shadow-sm"
+                    >
+                        <Plus size={18} />
+                        <span>Nueva Materia</span>
+                    </button>
+                </div>
             </div>
 
             <div className="space-y-10">
@@ -685,6 +698,44 @@ const SubjectsView = () => {
                     </div>
                 </form>
             </Modal>
+
+            {confirmClearOpen && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-sm animate-fade-in">
+                        <div className="p-6 space-y-4">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                                    <AlertTriangle size={20} className="text-red-600" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-slate-800">¿Borrar todas las materias?</h3>
+                                    <p className="text-sm text-slate-500 mt-0.5">Se eliminarán {state.subjects.length} materias, sus paralelos y todas las asignaciones de horario.</p>
+                                </div>
+                            </div>
+                            <div className="flex gap-2 pt-2">
+                                <button
+                                    onClick={() => setConfirmClearOpen(false)}
+                                    className="flex-1 px-4 py-2 text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors text-sm font-medium"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        dispatch({ type: 'BULK_SET_SUBJECTS', payload: [] });
+                                        dispatch({ type: 'CLEAR_ALL_COURSE_GROUPS' });
+                                        dispatch({ type: 'CLEAR_ALL_ASSIGNMENTS' });
+                                        setConfirmClearOpen(false);
+                                        toast.success('Todas las materias eliminadas');
+                                    }}
+                                    className="flex-1 px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors text-sm font-medium"
+                                >
+                                    Sí, borrar todo
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Mini-modal: nueva carrera */}
             {newCarreraModalOpen && (

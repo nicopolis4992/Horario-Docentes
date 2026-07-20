@@ -8,7 +8,8 @@ import {
     Monitor,
     MonitorPlay,
     Armchair,
-    School
+    School,
+    AlertTriangle
 } from 'lucide-react';
 import { CLASSROOM_CONFIG } from '../../../utils';
 import Modal from '../Common/Modal';
@@ -18,6 +19,7 @@ const ClassroomsView = () => {
     const { state, dispatch } = useAppStore();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingRoom, setEditingRoom] = useState<Classroom | null>(null);
+    const [confirmClearOpen, setConfirmClearOpen] = useState(false);
 
     const [formData, setFormData] = useState<Partial<Classroom>>({
         name: '',
@@ -96,13 +98,24 @@ const ClassroomsView = () => {
                     <h2 className="text-2xl font-bold text-slate-800">Aulas</h2>
                     <p className="text-slate-500 text-sm">Gestiona espacios físicos y sus capacidades.</p>
                 </div>
-                <button
-                    onClick={() => handleOpenModal()}
-                    className="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors shadow-sm"
-                >
-                    <Plus size={18} />
-                    <span>Nueva Aula</span>
-                </button>
+                <div className="flex gap-2">
+                    {state.classrooms.length > 0 && (
+                        <button
+                            onClick={() => setConfirmClearOpen(true)}
+                            className="flex items-center space-x-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-4 py-2 rounded-lg transition-colors"
+                        >
+                            <Trash2 size={16} />
+                            <span>Borrar todo</span>
+                        </button>
+                    )}
+                    <button
+                        onClick={() => handleOpenModal()}
+                        className="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors shadow-sm"
+                    >
+                        <Plus size={18} />
+                        <span>Nueva Aula</span>
+                    </button>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -259,6 +272,43 @@ const ClassroomsView = () => {
                     </div>
                 </form>
             </Modal>
+
+            {confirmClearOpen && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-sm animate-fade-in">
+                        <div className="p-6 space-y-4">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                                    <AlertTriangle size={20} className="text-red-600" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-slate-800">¿Borrar todas las aulas?</h3>
+                                    <p className="text-sm text-slate-500 mt-0.5">Se eliminarán {state.classrooms.length} aulas y todas sus asignaciones de horario.</p>
+                                </div>
+                            </div>
+                            <div className="flex gap-2 pt-2">
+                                <button
+                                    onClick={() => setConfirmClearOpen(false)}
+                                    className="flex-1 px-4 py-2 text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors text-sm font-medium"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        dispatch({ type: 'BULK_SET_CLASSROOMS', payload: [] });
+                                        dispatch({ type: 'CLEAR_ALL_ASSIGNMENTS' });
+                                        setConfirmClearOpen(false);
+                                        toast.success('Todas las aulas eliminadas');
+                                    }}
+                                    className="flex-1 px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors text-sm font-medium"
+                                >
+                                    Sí, borrar todo
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

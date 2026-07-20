@@ -258,7 +258,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       return parsed;
     }
-    return { ...MOCK_INITIAL_DATA, courseGroups: [] };
+    return initialState;
   });
 
   // Persistence Effect
