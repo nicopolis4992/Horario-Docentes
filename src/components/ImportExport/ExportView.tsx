@@ -49,8 +49,8 @@ const PrintableGrid: React.FC<{ resourceId: string, resourceType: 'teacher' | 'c
     ];
 
     // Collect unique subjectIds that appear in this resource's schedule, in stable order
-    const uniqueSubjectIds = Array.from(
-        new Set(resourceAssignments.map(a => a.subjectId).filter(Boolean))
+    const uniqueSubjectIds: string[] = Array.from(
+        new Set<string>(resourceAssignments.map((a: { subjectId: string }) => a.subjectId).filter(Boolean))
     );
 
     // Map subjectId -> palette entry (wraps around if > 12 subjects)

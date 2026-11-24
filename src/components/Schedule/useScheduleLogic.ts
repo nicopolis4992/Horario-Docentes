@@ -4,8 +4,7 @@ import { toast } from 'react-hot-toast';
 import {
     DayOfWeek,
     TimeSlot,
-    ScheduleAssignment,
-    ClassroomType
+    ScheduleAssignment
 } from '../../../types';
 import { generateTimeSlots } from '../../../utils';
 import { DragEndEvent, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
@@ -24,7 +23,7 @@ export const WEEKDAYS: DayOfWeek[] = ['Lunes', 'Martes', 'Miércoles', 'Jueves',
 
 export const useScheduleLogic = () => {
     const { state, dispatch } = useAppStore();
-    const timeSlots = generateTimeSlots();
+    const timeSlots = useMemo(() => generateTimeSlots(), []);
 
     // View Mode: 'teachers' or 'classrooms'
     const [viewMode, setViewMode] = useState<'teacher' | 'classroom'>('teacher');
@@ -80,9 +79,37 @@ export const useScheduleLogic = () => {
             const pattern = group.sessionPattern || [group.totalHours];
             const groupAssignments = state.assignments.filter(a => a.courseGroupId === group.id);
 
-            let assignedRemaining = groupAssignments.length;
+            // Split assignments into contiguous blocks per day (e.g. Lunes 2h, Martes 1h)
+            const blocks: number[] = [];
+            const byDay = new Map<string, number[]>();
+            groupAssignments.forEach(a => {
+                const idx = timeSlots.findIndex(s => s.id === a.timeSlotId);
+                if (!byDay.has(a.day)) byDay.set(a.day, []);
+                byDay.get(a.day)!.push(idx);
+            });
+            byDay.forEach(indices => {
+                indices.sort((x, y) => x - y);
+                let run = 1;
+                for (let i = 1; i <= indices.length; i++) {
+                    if (i < indices.length && indices[i] === indices[i - 1] + 1) run++;
+                    else { blocks.push(run); run = 1; }
+                }
+            });
+
+            // First, match placed blocks to pattern entries of the exact same size
+            const consumed = new Set<number>();
+            const leftover: number[] = [];
+            blocks.forEach(size => {
+                const idx = pattern.findIndex((h, i) => h === size && !consumed.has(i));
+                if (idx >= 0) consumed.add(idx);
+                else leftover.push(size);
+            });
+
+            // Remaining placed hours (blocks that didn't match exactly) consume the rest positionally
+            let assignedRemaining = leftover.reduce((sum, n) => sum + n, 0);
 
             pattern.forEach((hours, idx) => {
+                if (consumed.has(idx)) return;
                 if (assignedRemaining >= hours) {
                     assignedRemaining -= hours;
                 } else if (assignedRemaining > 0) {
@@ -110,7 +137,7 @@ export const useScheduleLogic = () => {
         });
 
         return sessions;
-    }, [state.courseGroups, state.assignments]);
+    }, [state.courseGroups, state.assignments, timeSlots]);
 
     // --- Pending Sessions (Filtered by context) ---
     const pendingSessions = useMemo(() => {
@@ -261,7 +288,7 @@ export const useScheduleLogic = () => {
         } else if (assignMode === 'group' && selectedGroupId) {
             const session = pendingSessions.find(s => s.id === selectedGroupId) || allPendingSessions.find(s => s.id === selectedGroupId);
             if (session) {
-                assignSessionToCell(session, selectedCell.day, selectedCell.slot.id, formTeacherId, formClassroomId);
+                if (!assignSessionToCell(session, selectedCell.day, selectedCell.slot.id, formTeacherId, formClassroomId)) return;
                 toast.success('Sesión asignada correctamente');
             }
         } else {
@@ -286,6 +313,10 @@ export const useScheduleLogic = () => {
     const assignSessionToCell = (session: PendingSession, day: DayOfWeek, slotId: string, teacherId: string, classroomId: string, isIncomplete: boolean = false) => {
         const hoursToAssign = session.hours;
         const currentSlotIndex = timeSlots.findIndex(s => s.id === slotId);
+        if (currentSlotIndex < 0 || currentSlotIndex + hoursToAssign > timeSlots.length) {
+            toast.error('La sesión no cabe al final del día.');
+            return false;
+        }
 
         const newAssignments: ScheduleAssignment[] = [];
 
@@ -306,6 +337,7 @@ export const useScheduleLogic = () => {
         }
 
         newAssignments.forEach(a => dispatch({ type: 'ADD_ASSIGNMENT', payload: a }));
+        return true;
     };
 
     const validateMove = (
@@ -413,7 +445,7 @@ export const useScheduleLogic = () => {
             const validation = validateMove(dropDay, dropSlotId, session.hours, teacherId, classroomId, session.subjectId);
             const isIncomplete = !teacherId || !classroomId || !validation.valid;
 
-            assignSessionToCell(session, dropDay, dropSlotId, teacherId, classroomId, isIncomplete);
+            if (!assignSessionToCell(session, dropDay, dropSlotId, teacherId, classroomId, isIncomplete)) return;
 
             // If teacher changed (cross-teacher drag), update the course group
             if (group && teacherId && group.teacherId !== teacherId) {
@@ -451,8 +483,12 @@ export const useScheduleLogic = () => {
 
             const isIncomplete = !validation.valid || !assignment.teacherId || !targetClassroomId;
 
-            // Perform Move
+            // Perform Move — abort if the block doesn't fit before the end of the day
             const currentSlotIndex = timeSlots.findIndex(s => s.id === dropSlotId);
+            if (currentSlotIndex < 0 || currentSlotIndex + span > timeSlots.length) {
+                toast.error('La clase no cabe al final del día.');
+                return;
+            }
 
             // Delete old assignments
             assignmentIds.forEach((id: string) => dispatch({ type: 'DELETE_ASSIGNMENT', payload: id }));
@@ -528,66 +564,53 @@ export const useScheduleLogic = () => {
     const handleAutoAssignAll = () => {
         const newAssignments: ScheduleAssignment[] = [];
 
-        // Build all pending groups
-        const allPendingGroups = state.courseGroups.map(group => {
-            const assignedCount = state.assignments.filter(a => a.courseGroupId === group.id).length;
-            return { ...group, remaining: group.totalHours - assignedCount };
-        }).filter(g => g.remaining > 0);
+        // Build all pending groups, each with its pending session chunks (respects sessionPattern)
+        const allPendingGroups = state.courseGroups.map(group => ({
+            ...group,
+            chunks: allPendingSessions.filter(s => s.groupId === group.id).map(s => s.hours)
+        })).filter(g => g.chunks.length > 0);
+
+        // Days already used by each group (so split sessions land on different days)
+        const groupDays = new Map<string, Set<DayOfWeek>>();
+        state.assignments.forEach(a => {
+            if (!a.courseGroupId) return;
+            if (!groupDays.has(a.courseGroupId)) groupDays.set(a.courseGroupId, new Set());
+            groupDays.get(a.courseGroupId)!.add(a.day);
+        });
+        let unplacedSessions = 0;
 
         // Shared tracking sets (mutated across all passes)
         const occupiedSlots = new Set<string>(state.assignments.map(a => `${a.day}-${a.timeSlotId}-${a.teacherId}`));
         const occupiedRooms = new Set<string>(state.assignments.map(a => `${a.day}-${a.timeSlotId}-${a.classroomId}`));
 
-        // ── findBestClassroom: picks the best available room for a subject+slot ──
-        const findBestClassroom = (
-            subject: { allowedClassroomIds?: string[]; allowedClassroomTypes?: ClassroomType[] },
-            slotId: string,
-            day: DayOfWeek,
-            preferredRoomId?: string
-        ): string | null => {
-            // Priority 1: specific allowed classrooms (from Materias config)
-            if (subject.allowedClassroomIds && subject.allowedClassroomIds.length > 0) {
-                for (const cId of subject.allowedClassroomIds) {
-                    if (!occupiedRooms.has(`${day}-${slotId}-${cId}`)) return cId;
-                }
-            }
-            // Priority 2: try the planned/preferred room if given
-            if (preferredRoomId && !occupiedRooms.has(`${day}-${slotId}-${preferredRoomId}`)) {
-                return preferredRoomId;
-            }
-            // Priority 3: any room matching allowed types
-            if (subject.allowedClassroomTypes && subject.allowedClassroomTypes.length > 0) {
-                for (const c of state.classrooms) {
-                    if (subject.allowedClassroomTypes.includes(c.type)) {
-                        if (!occupiedRooms.has(`${day}-${slotId}-${c.id}`)) return c.id;
-                    }
-                }
-            }
-            return null;
-        };
-
-        // ── tryAssignGroup: attempts to place a group on the schedule ──
+        // ── tryAssignSession: attempts to place ONE session chunk of a group on the schedule ──
         // mode: 'mandatory' = MUST use allowedClassroomIds (fail if none free)
         //        'flexible'  = try preferredRoom, then any compatible, skip if nothing
-        const tryAssignGroup = (
+        const tryAssignSession = (
             group: typeof allPendingGroups[0],
+            hoursToAssign: number,
             mode: 'mandatory' | 'flexible'
-        ) => {
+        ): boolean => {
             const subject = state.subjects.find(s => s.id === group.subjectId);
-            if (!subject) return;
+            if (!subject) return false;
 
-            const hoursToAssign = group.remaining;
             const teacherId = group.teacherId;
-            if (!teacherId) return;
+            if (!teacherId) return false;
 
             const teacher = state.teachers.find(t => t.id === teacherId);
             const preferredDays = subject.preferredDays && subject.preferredDays.length > 0 ? subject.preferredDays : WEEKDAYS;
+            const usedDays = groupDays.get(group.id) || new Set<DayOfWeek>();
             let assigned = false;
 
-            // Sort days by least-occupied first
+            // Sort days: days not yet used by this group first, then least-occupied
+            const dayLoad = (d: DayOfWeek) => {
+                let n = 0;
+                occupiedSlots.forEach(k => { if (k.startsWith(`${d}-`)) n++; });
+                return n;
+            };
             const sortedDays = [...preferredDays].sort((a, b) => {
-                const arr = Array.from(occupiedSlots);
-                return arr.filter(k => k.startsWith(`${a}-`)).length - arr.filter(k => k.startsWith(`${b}-`)).length;
+                const usedDiff = Number(usedDays.has(a)) - Number(usedDays.has(b));
+                return usedDiff !== 0 ? usedDiff : dayLoad(a) - dayLoad(b);
             });
 
             for (const day of sortedDays) {
@@ -672,11 +695,21 @@ export const useScheduleLogic = () => {
                                 occupiedSlots.add(`${day}-${slotId}-${teacherId}`);
                                 occupiedRooms.add(`${day}-${slotId}-${chosenRoom!}`);
                             });
+                            if (!groupDays.has(group.id)) groupDays.set(group.id, new Set());
+                            groupDays.get(group.id)!.add(day);
                             assigned = true;
                         }
                     }
                 }
             }
+            return assigned;
+        };
+
+        const tryAssignGroup = (group: typeof allPendingGroups[0], mode: 'mandatory' | 'flexible') => {
+            // Largest chunks first: harder to fit
+            [...group.chunks].sort((a, b) => b - a).forEach(hours => {
+                if (!tryAssignSession(group, hours, mode)) unplacedSessions++;
+            });
         };
 
         // ── Split groups into passes ──
@@ -706,6 +739,14 @@ export const useScheduleLogic = () => {
 
         if (newAssignments.length > 0) {
             newAssignments.forEach(a => dispatch({ type: 'ADD_ASSIGNMENT', payload: a }));
+        }
+
+        if (allPendingGroups.length === 0) {
+            toast('No hay sesiones pendientes para asignar.');
+        } else if (unplacedSessions > 0) {
+            toast(`Se asignaron ${newAssignments.length}h. ${unplacedSessions} sesión(es) no se pudieron ubicar (sin docente, sin aula libre o restricciones).`, { icon: '⚠️', duration: 6000 });
+        } else {
+            toast.success(`Auto-asignación completa: ${newAssignments.length}h asignadas.`);
         }
     };
 

@@ -126,19 +126,30 @@ const appReducer = (state: AppState, action: Action): AppState => {
     // --- Course Groups ---
     case 'ADD_COURSE_GROUP':
       return { ...state, courseGroups: [...state.courseGroups, action.payload] };
-    case 'UPDATE_COURSE_GROUP':
+    case 'UPDATE_COURSE_GROUP': {
+      const prev = state.courseGroups.find(g => g.id === action.payload.id);
+      const teacherChanged = !!action.payload.teacherId && action.payload.teacherId !== prev?.teacherId;
+      const roomChanged = !!action.payload.plannedClassroomId && action.payload.plannedClassroomId !== prev?.plannedClassroomId;
       return {
         ...state,
         courseGroups: state.courseGroups.map((g) =>
           g.id === action.payload.id ? action.payload : g
         ),
-        // Cascade update: If teacher or classroom changed, update all existing assignments for this group
-        assignments: state.assignments.map(a =>
-          a.courseGroupId === action.payload.id
-            ? { ...a, teacherId: action.payload.teacherId || a.teacherId, classroomId: action.payload.plannedClassroomId || a.classroomId }
-            : a
-        )
+        // Cascade update: only propagate the fields that actually changed,
+        // so rooms chosen per-session (e.g. by auto-assign) aren't overwritten on a teacher change
+        assignments: (teacherChanged || roomChanged)
+          ? state.assignments.map(a =>
+            a.courseGroupId === action.payload.id
+              ? {
+                ...a,
+                teacherId: teacherChanged ? action.payload.teacherId! : a.teacherId,
+                classroomId: roomChanged ? action.payload.plannedClassroomId! : a.classroomId
+              }
+              : a
+          )
+          : state.assignments
       };
+    }
     case 'DELETE_COURSE_GROUP':
       return {
         ...state,
@@ -227,7 +238,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [state, dispatch] = useReducer(appReducer, initialState, () => {
     const localData = localStorage.getItem('scheduler_app_v1');
     if (localData) {
-      const parsed = JSON.parse(localData);
+      let parsed: any;
+      try {
+        parsed = JSON.parse(localData);
+        if (!parsed || typeof parsed !== 'object') throw new Error('Formato inválido');
+      } catch (err) {
+        // Keep a copy of the corrupt data so it isn't overwritten by the persistence effect
+        console.error('No se pudieron cargar los datos guardados:', err);
+        localStorage.setItem(`scheduler_app_v1_corrupt_${Date.now()}`, localData);
+        return initialState;
+      }
+      // Migration: Ensure all collections exist
+      for (const key of ['teachers', 'classrooms', 'subjects', 'assignments'] as const) {
+        if (!Array.isArray(parsed[key])) parsed[key] = [];
+      }
       // Migration: Ensure courseGroups exists if loading old data
       if (!parsed.courseGroups) parsed.courseGroups = [];
 
